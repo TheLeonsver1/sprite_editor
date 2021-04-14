@@ -10,8 +10,10 @@ use bevy_egui::EguiPlugin;
 use bevy_prototype_lyon::prelude::*;
 
 mod data;
-use data::{shared_components::Uninitiated, systems::*};
+mod systems;
 mod ui;
+use data::shared_components::Uninitiated;
+use systems::initializing::*;
 
 ///The default font for the app, everything should use this
 pub const DEFAULT_FONT: &str = "Roboto-Regular.ttf";
@@ -74,6 +76,7 @@ fn main() {
                         .after(SystemLabels::InitTile),
                 ),
         )
+        .add_system_set(SystemSet::on_update(AppState::EditingTileSet))
         //.add_system_set(add_init_systems_to_system_set(SystemSet::on_resume(AppState::CreateNewTileSet)))
         //.add_system_set(SystemSet::on_update(AppState::EditingTileSet).with_system(update_textures_for_changed_tile_data.system().label(SystemLabels::UpdateTexturesForVisual)))
         .run();

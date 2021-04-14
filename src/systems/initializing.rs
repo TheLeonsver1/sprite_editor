@@ -1,9 +1,10 @@
-use crate::AppState;
-
-use super::{
-    shared_components::Uninitiated,
-    tile_entity::{TileData, TileSettings},
-    tileset_entity::TileSetSettings,
+use crate::{
+    data::{
+        shared_components::Uninitiated,
+        tile_entity::{TileBundle, TileData, TileSettings},
+        tileset_entity::TileSetSettings,
+    },
+    AppState,
 };
 use bevy::{prelude::*, tasks::ComputeTaskPool};
 use bevy::{
@@ -49,7 +50,7 @@ pub fn init_tileset(
                     for x_tileset in 0..tileset_settings.tileset_width {
                         let texture_handle = textures.add(texture.clone());
                         let material_handle = materials.add(ColorMaterial::texture(texture_handle));
-                        tileset_parent.spawn_bundle(super::tile_entity::TileBundle::new(
+                        tileset_parent.spawn_bundle(TileBundle::new(
                             TileSettings{tile_width:tileset_settings.tile_width,tile_height:tileset_settings.tile_height},
                             material_handle,
                             Transform {
