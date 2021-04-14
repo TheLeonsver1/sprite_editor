@@ -45,6 +45,7 @@ impl TileSetSettings {
             tileset_width: 10,
         }
     }
+    #[allow(dead_code)]
     ///Creates a tileset made out of multiple sprites
     fn multiple_tiles() -> Self {
         Self {

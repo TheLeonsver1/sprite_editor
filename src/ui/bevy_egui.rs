@@ -1,9 +1,5 @@
-use bevy::input::keyboard::KeyboardInput;
-use bevy::{
-    prelude::*,
-    render::{texture::ImageType, *},
-};
-use bevy_egui::{egui, EguiContext, EguiPlugin, EguiSettings};
+use bevy::prelude::*;
+use bevy_egui::{egui, EguiContext};
 
 use crate::data::{
     resources::SelectedTileSetEntity,
@@ -87,17 +83,17 @@ pub fn draw_gui(
                                     ui.label("Tile:");
                                     ui.horizontal(|ui|{
                                         ui.label("Width:").on_hover_text("A single tile's width");
-                                        ui.add(egui::DragValue::u32(&mut ctx_menu_state.tileset_settings.tile_width).clamp_range(1_f32..=u16::MAX as f32));
+                                        ui.add(egui::DragValue::new(&mut ctx_menu_state.tileset_settings.tile_width).clamp_range(1_f32..=u16::MAX as f32));
                                         ui.label("Height:").on_hover_text("A single tile's height");
-                                        ui.add(egui::DragValue::u32(&mut ctx_menu_state.tileset_settings.tile_height).clamp_range(1_f32..=u16::MAX as f32));
+                                        ui.add(egui::DragValue::new(&mut ctx_menu_state.tileset_settings.tile_height).clamp_range(1_f32..=u16::MAX as f32));
                                     });
                                     //Tileset settings
                                     ui.label("TileSet:");
                                     ui.horizontal(|ui|{
                                         ui.label("Width:").on_hover_text("How many tiles in the horizontal direction of your tileset?");
-                                        ui.add(egui::DragValue::u8(&mut ctx_menu_state.tileset_settings.tileset_width).clamp_range(1_f32..=64_f32));
+                                        ui.add(egui::DragValue::new(&mut ctx_menu_state.tileset_settings.tileset_width).clamp_range(1_f32..=64_f32));
                                         ui.label("Height:").on_hover_text("How many tiles in the vertical direction of your tileset?");
-                                        ui.add(egui::DragValue::u8(&mut ctx_menu_state.tileset_settings.tileset_height).clamp_range(1_f32..=64_f32));
+                                        ui.add(egui::DragValue::new(&mut ctx_menu_state.tileset_settings.tileset_height).clamp_range(1_f32..=64_f32));
                                     });
                                     //If we confirmed the creation of a new tileset
                                     if ui.button("Create new").clicked(){
@@ -121,7 +117,7 @@ pub fn draw_gui(
                         }
                     }
                     //If we want to display the Options ui, show appropriate ui
-                    ContextMenuState::Options(selected) => {
+                    ContextMenuState::Options(_selected) => {
 
                     }
                     //This can't happen since it's checked above but rust is weird

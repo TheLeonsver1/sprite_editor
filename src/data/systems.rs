@@ -95,6 +95,7 @@ pub fn get_scale_fit_tileset_to_screen(
 }
 ///FIXME:(maybe) This crashes for some reason
 ///This initiates a newly created tile in a parralel manner
+#[allow(dead_code)]
 pub fn init_tile_par(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
@@ -105,24 +106,20 @@ pub fn init_tile_par(
         1,
         |(entity, tile_settings, mut tile_data, mut visible)| {
             //Creating a transparent texture once
-            //let mut sprite_data: Vec<u8> = Vec::with_capacity(
-            //    (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
-            //);
-            //Going in reverse because in textures y is higher at the bottom
-            /*let mut vec = Vec::<u8>::with_capacity(
+            let mut sprite_data: Vec<u8> = Vec::with_capacity(
                 (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
             );
+            //Going in reverse because in textures y is higher at the bottom
             for _y_tile in (0..tile_settings.tile_height).rev() {
                 for _x_tile in 0..tile_settings.tile_width {
-                    vec.push(255);
-                    vec.push(255);
-                    vec.push(255);
-                    vec.push(0);
+                    sprite_data.push(255);
+                    sprite_data.push(255);
+                    sprite_data.push(255);
+                    sprite_data.push(0);
                 }
             }
             visible.is_visible = true;
-            tile_data.data = vec;
-            */
+            tile_data.data = sprite_data;
             println!("{:?}", entity);
         },
     );
@@ -135,7 +132,6 @@ pub fn init_tile_par(
 ///This initiates a newly created tile in a sequential manner
 pub fn init_tile_seq(
     mut commands: Commands,
-    pool: Res<ComputeTaskPool>,
     mut query: Query<(Entity, &TileSettings, &mut TileData, &mut Visible), With<Uninitiated>>,
 ) {
     //Honestly, there shouldn't be two sets of new tiles in the same frame but to be safe
@@ -152,8 +148,8 @@ pub fn init_tile_seq(
                 (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
             );
             //TODO: This could be a one dimensional loop, replace it after you copied into the brush mechanism
-            for y_tile in (0..tile_settings.tile_height).rev() {
-                for x_tile in 0..tile_settings.tile_width {
+            for _y_tile in (0..tile_settings.tile_height).rev() {
+                for _x_tile in 0..tile_settings.tile_width {
                     texture_data.push(255);
                     texture_data.push(255);
                     texture_data.push(255);

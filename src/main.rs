@@ -1,28 +1,14 @@
 use bevy::{
     ecs::component::ComponentDescriptor,
     render::{
-        pipeline::{
-            BlendFactor, BlendOperation, BlendState, ColorTargetState, ColorWrite, CompareFunction,
-            CullMode, DepthBiasState, DepthStencilState, FrontFace, PipelineDescriptor,
-            PolygonMode, PrimitiveState, PrimitiveTopology, StencilFaceState, StencilState,
-        },
-        render_graph::{base, AssetRenderResourcesNode, RenderGraph, RenderResourcesNode},
-        shader::{Shader, ShaderStage, ShaderStages},
-        texture::TextureFormat,
+        pipeline::PipelineDescriptor,
+        shader::{Shader, ShaderStage},
     },
 };
-use bevy::{
-    ecs::component::{Component, StorageType},
-    prelude::*,
-    reflect::TypeUuid,
-    render::camera::RenderLayers,
-};
+use bevy::{ecs::component::StorageType, prelude::*, reflect::TypeUuid};
 use bevy_egui::EguiPlugin;
-use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
-use bevy_tilemap::prelude::*;
+use bevy_prototype_lyon::prelude::*;
 
-use enum_index::EnumIndex;
-use enum_index_derive::EnumIndex;
 mod data;
 use data::{shared_components::Uninitiated, systems::*};
 mod ui;
@@ -39,16 +25,6 @@ pub enum AppState {
     ///We're editing some tileset now, we need to run systems to handle user input and data updating
     EditingTileSet,
 }
-#[derive(Debug, EnumIndex, Clone)]
-///The different cameras that view the world and their corresponding render layers(their index in the enum is their layer)
-enum Windows {
-    ///The Main Editor Panel, here you edit the tileset
-    TileSetEditor,
-    ///The Minimized View of the tileSetView
-    ColorPicker,
-    ///The Panel where you can test your tilesets, you can edit your tiles here too
-    TilePlayground,
-}
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemLabel)]
 enum SystemLabels {
     DrawGui,
@@ -56,7 +32,6 @@ enum SystemLabels {
     InitTile,
     ChangeTileData,
     UpdateTexturesForVisual,
-    ChangeStateToEditing,
 }
 fn main() {
     AppBuilder::default()
