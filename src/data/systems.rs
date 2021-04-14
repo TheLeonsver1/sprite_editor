@@ -5,8 +5,12 @@ use super::{
     tile_entity::{TileData, TileSettings},
     tileset_entity::TileSetSettings,
 };
-use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{
+    render::texture::{Extent3d, TextureDimension, TextureFormat},
+    utils::HashMap,
+};
+///Initiates a new TileSet entity and it's tile children
 pub fn init_tileset(
     mut commands: Commands,
     query: Query<(Entity, &TileSetSettings), With<Uninitiated>>,
@@ -67,13 +71,14 @@ pub fn init_tileset(
         commands.entity(tileset_entity).remove::<Uninitiated>();
     }
 }
-
+///Calculates the total size of the tileset
 pub fn get_total_tileset_size(tileset_settings: &TileSetSettings) -> (f32, f32) {
     (
         tileset_settings.tileset_width as f32 * tileset_settings.tile_width as f32,
         tileset_settings.tileset_height as f32 * tileset_settings.tile_height as f32,
     )
 }
+///Returns the scale(on one axis) that is required to fit the tileset in the screen
 pub fn get_scale_fit_tileset_to_screen(
     tileset_settings: &TileSetSettings,
     window_width: f32,
@@ -88,14 +93,14 @@ pub fn get_scale_fit_tileset_to_screen(
     }
     1.0 / percent
 }
-pub fn init_tile(
+///FIXME:(maybe) This crashes for some reason
+///This initiates a newly created tile in a parralel manner
+pub fn init_tile_par(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
     mut query: Query<(Entity, &TileSettings, &mut TileData, &mut Visible), With<Uninitiated>>,
 ) {
-    println!("Called init_tile");
-    //Initiate a transparent tile in a parralel manner
-    /*query.par_for_each_mut(
+    query.par_for_each_mut(
         &pool,
         1,
         |(entity, tile_settings, mut tile_data, mut visible)| {
@@ -121,24 +126,51 @@ pub fn init_tile(
             println!("{:?}", entity);
         },
     );
-    */
 
-    for (_, tile_settings, mut tile_data, mut visible) in query.iter_mut() {
-        tile_data.data = Vec::<u8>::with_capacity(
-            (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
-        );
-        for y_tile in (0..tile_settings.tile_height).rev() {
-            for x_tile in 0..tile_settings.tile_width {
-                tile_data.data.push(255);
-                tile_data.data.push(255);
-                tile_data.data.push(255);
-                tile_data.data.push(0);
-            }
-        }
-        visible.is_visible = true;
-    }
     //Remove the Unitiated component from the entity
     for (entity, _, _, _) in query.iter_mut() {
+        commands.entity(entity).remove::<Uninitiated>();
+    }
+}
+///This initiates a newly created tile in a sequential manner
+pub fn init_tile_seq(
+    mut commands: Commands,
+    pool: Res<ComputeTaskPool>,
+    mut query: Query<(Entity, &TileSettings, &mut TileData, &mut Visible), With<Uninitiated>>,
+) {
+    //Honestly, there shouldn't be two sets of new tiles in the same frame but to be safe
+    //Also, this could belong in a Local, but i don't even know if it's a perf improvement
+    let mut hm: HashMap<(u32, u32), Vec<u8>> = HashMap::default();
+
+    for (entity, tile_settings, mut tile_data, mut visible) in query.iter_mut() {
+        if let Some(texture_data) = hm.get(&(tile_settings.tile_width, tile_settings.tile_height)) {
+            //Cloning existing texture data for tile_settings we already encountered
+            tile_data.data = texture_data.clone();
+        } else {
+            //Creating a transparent texture for these newly encountered settings
+            let mut texture_data = Vec::<u8>::with_capacity(
+                (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
+            );
+            //TODO: This could be a one dimensional loop, replace it after you copied into the brush mechanism
+            for y_tile in (0..tile_settings.tile_height).rev() {
+                for x_tile in 0..tile_settings.tile_width {
+                    texture_data.push(255);
+                    texture_data.push(255);
+                    texture_data.push(255);
+                    texture_data.push(0);
+                }
+            }
+            //Insert this data to the hash map so we could just clone it instead of creating a new vec
+            hm.insert(
+                (tile_settings.tile_width, tile_settings.tile_height),
+                texture_data.clone(),
+            );
+            //Don't forget to set the tile's data
+            tile_data.data = texture_data;
+        }
+        //Make the tile visible since it should be immediately rendered after this is done
+        visible.is_visible = true;
+        //Remove the marker so the data won't be deleted if we decide to create a new Tileset later
         commands.entity(entity).remove::<Uninitiated>();
     }
 }

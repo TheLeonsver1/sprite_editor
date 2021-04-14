@@ -87,7 +87,7 @@ fn main() {
             SystemSet::on_update(AppState::CreateNewTileSet)
                 .with_system(init_tileset.system().label(SystemLabels::InitTileset))
                 .with_system(
-                    init_tile
+                    init_tile_seq
                         .system()
                         .label(SystemLabels::InitTile)
                         .after(SystemLabels::InitTileset),
