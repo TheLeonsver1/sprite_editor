@@ -103,33 +103,6 @@ fn main() {
         //.add_system_set(SystemSet::on_update(AppState::EditingTileSet).with_system(update_textures_for_changed_tile_data.system().label(SystemLabels::UpdateTexturesForVisual)))
         .run();
 }
-pub fn add_init_chained(system_set: SystemSet) -> SystemSet {
-    system_set
-        .with_system(
-            init_tileset
-                .system()
-                .chain(init_tile.system())
-                .chain(update_textures_for_changed_tile_data.system()),
-        )
-        .after(SystemLabels::DrawGui)
-}
-pub fn add_init_systems_to_system_set(system_set: SystemSet) -> SystemSet {
-    system_set
-        .with_system(init_tileset.system().label(SystemLabels::InitTileset))
-        .with_system(
-            init_tile
-                .system()
-                .label(SystemLabels::InitTile)
-                .after(SystemLabels::InitTileset),
-        )
-    /*.with_system(
-        update_textures_for_changed_tile_data
-            .system()
-            .label(SystemLabels::UpdateTexturesForVisual)
-            .after(SystemLabels::InitTile),
-    )
-    */
-}
 pub const CUSTOM_SPRITE_PIPELINE_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, 2785347850338765446);
 

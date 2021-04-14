@@ -95,31 +95,34 @@ pub fn init_tile(
 ) {
     println!("Called init_tile");
     //Initiate a transparent tile in a parralel manner
-    query.par_for_each_mut(
+    /*query.par_for_each_mut(
         &pool,
         1,
-        |(_, tile_settings, mut tile_data, mut visible)| {
+        |(entity, tile_settings, mut tile_data, mut visible)| {
             //Creating a transparent texture once
             //let mut sprite_data: Vec<u8> = Vec::with_capacity(
             //    (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
             //);
             //Going in reverse because in textures y is higher at the bottom
-            tile_data.data = Vec::<u8>::with_capacity(
+            /*let mut vec = Vec::<u8>::with_capacity(
                 (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
             );
-            for y_tile in (0..tile_settings.tile_height).rev() {
-                for x_tile in 0..tile_settings.tile_width {
-                    tile_data.data.push(255);
-                    tile_data.data.push(255);
-                    tile_data.data.push(255);
-                    tile_data.data.push(0);
+            for _y_tile in (0..tile_settings.tile_height).rev() {
+                for _x_tile in 0..tile_settings.tile_width {
+                    vec.push(255);
+                    vec.push(255);
+                    vec.push(255);
+                    vec.push(0);
                 }
             }
             visible.is_visible = true;
-            //tile_data.data = sprite_data.clone();
+            tile_data.data = vec;
+            */
+            println!("{:?}", entity);
         },
     );
-    /*
+    */
+
     for (_, tile_settings, mut tile_data, mut visible) in query.iter_mut() {
         tile_data.data = Vec::<u8>::with_capacity(
             (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
@@ -133,7 +136,7 @@ pub fn init_tile(
             }
         }
         visible.is_visible = true;
-    }*/
+    }
     //Remove the Unitiated component from the entity
     for (entity, _, _, _) in query.iter_mut() {
         commands.entity(entity).remove::<Uninitiated>();
@@ -141,7 +144,7 @@ pub fn init_tile(
 }
 pub fn update_textures_for_changed_tile_data(
     mut textures: ResMut<Assets<Texture>>,
-    materials: Res<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     query: Query<(&TileSettings, &TileData, &Handle<ColorMaterial>), Changed<TileData>>,
     mut app_state: ResMut<State<AppState>>,
 ) {
@@ -149,18 +152,17 @@ pub fn update_textures_for_changed_tile_data(
     let mut count: u32 = 0;
     for (tile_settings, tile_data, material_handle) in query.iter() {
         //This shouldn't fail really, i shouldn't delete any of them anywhere
-        let material = materials.get(material_handle).unwrap();
-        let texture_handle = material.texture.clone().unwrap();
-        let texture = textures.get_mut(texture_handle).unwrap();
-        *texture = Texture::new(
+        let material = materials.get_mut(material_handle).unwrap();
+        let texture_handle = textures.add(Texture::new(
             Extent3d::new(tile_settings.tile_width, tile_settings.tile_height, 1),
             TextureDimension::D2,
             tile_data.data.clone(),
             TextureFormat::Rgba8UnormSrgb,
-        );
+        ));
+        material.texture = Some(texture_handle);
         count += 1;
     }
-    if *app_state.current() == AppState::CreateNewTileSet && count != 0 {
+    if count != 0 {
         app_state.set(AppState::EditingTileSet).unwrap();
     }
 }
