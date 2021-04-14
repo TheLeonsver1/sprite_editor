@@ -2,7 +2,7 @@ use crate::{
     data::{
         shared_components::Uninitiated,
         tile_entity::{TileBundle, TileData, TileSettings},
-        tileset_entity::TileSetSettings,
+        tileset_entity::{TileSetBundle, TileSetSettings},
     },
     AppState,
 };
@@ -11,7 +11,9 @@ use bevy::{
     render::texture::{Extent3d, TextureDimension, TextureFormat},
     utils::HashMap,
 };
-///Initiates a new TileSet entity and it's tile children
+///Initiates a newly Created [TileSetBundle](TileSetBundle) entity and it's [TileBundle](TileBundle) children
+///
+///TODO: Consider moving the calling of this fn into on_enter() and on_resume() and spawn the TileSetBundle entity in here to disentangle more gui and data(this would maybe be a bit annoying and would require a resource)
 pub fn init_tileset(
     mut commands: Commands,
     query: Query<(Entity, &TileSetSettings), With<Uninitiated>>,
@@ -25,61 +27,57 @@ pub fn init_tileset(
         let window = windows.get_primary().unwrap();
         let scale =
             get_scale_fit_tileset_to_screen(tileset_settings, window.width(), window.height());
-        /*
-        let translation:Vec3;
-        if tileset_settings.tileset_height!=1 || tileset_settings.tileset_width!=1 {
-            let (tileset_total_width, tileset_total_height) = get_total_tileset_size(tileset_settings);
-            translation =/* (1.0/ scale) **/ Vec3::new(tileset_total_width * -1.0, tileset_total_height * -1.0, 0.0);
-        }
-        else{
-            translation = Vec3::default();
-        }
-         */
         //TODO: Disable 1 pixel sprite creation
         let texture = Texture::default();
         commands
             .entity(tileset_entity)
             .insert(Transform {
-                scale:Vec3::new(scale,scale,1.0),
+                scale: Vec3::new(scale, scale, 1.0),
                 //translation,
                 ..Default::default()
             })
             .with_children(|tileset_parent| {
-                //println!("{:?}",tileset_settings);
                 for y_tileset in 0..tileset_settings.tileset_height {
                     for x_tileset in 0..tileset_settings.tileset_width {
                         let texture_handle = textures.add(texture.clone());
                         let material_handle = materials.add(ColorMaterial::texture(texture_handle));
                         tileset_parent.spawn_bundle(TileBundle::new(
-                            TileSettings{tile_width:tileset_settings.tile_width,tile_height:tileset_settings.tile_height},
+                            TileSettings {
+                                tile_width: tileset_settings.tile_width,
+                                tile_height: tileset_settings.tile_height,
+                            },
                             material_handle,
                             Transform {
                                 //scale,
-                                translation: /*scale
-                                    * */ Vec3::new(
-                                        (x_tileset as f32 - tileset_settings.tileset_width as f32/2.0) * tileset_settings.tile_width as f32 + tileset_settings.tile_height as f32/2.0,
-                                        (y_tileset as f32 - tileset_settings.tileset_height as f32/2.0) * tileset_settings.tile_height as f32 + tileset_settings.tile_height as f32/2.0,
-                                        0.0,
-                                    ),
+                                translation: Vec3::new(
+                                    (x_tileset as f32
+                                        - tileset_settings.tileset_width as f32 / 2.0)
+                                        * tileset_settings.tile_width as f32
+                                        + tileset_settings.tile_height as f32 / 2.0,
+                                    (y_tileset as f32
+                                        - tileset_settings.tileset_height as f32 / 2.0)
+                                        * tileset_settings.tile_height as f32
+                                        + tileset_settings.tile_height as f32 / 2.0,
+                                    0.0,
+                                ),
                                 ..Default::default()
                             },
                         ));
-                        //Works: commands.spawn_bundle(TileBundle::new(material_handle));
-                        //commands.spawn_bundle(SpriteBundle{material:material_handle,..Default::default()});
                     }
                 }
             });
+        //Don't forget to remove the marker component so this function won't run for it again if another tileset is created
         commands.entity(tileset_entity).remove::<Uninitiated>();
     }
 }
-///Calculates the total size of the tileset
+///Calculates the total size of the [TileSetBundle](TileSetBundle)
 pub fn get_total_tileset_size(tileset_settings: &TileSetSettings) -> (f32, f32) {
     (
         tileset_settings.tileset_width as f32 * tileset_settings.tile_width as f32,
         tileset_settings.tileset_height as f32 * tileset_settings.tile_height as f32,
     )
 }
-///Returns the scale(on one axis) that is required to fit the tileset in the screen
+///Returns the scale(on one axis) that is required to fit the [TileSetBundle](TileSetBundle) in the screen
 pub fn get_scale_fit_tileset_to_screen(
     tileset_settings: &TileSetSettings,
     window_width: f32,
@@ -95,7 +93,8 @@ pub fn get_scale_fit_tileset_to_screen(
     1.0 / percent
 }
 ///FIXME:(maybe) This crashes for some reason
-///This initiates a newly created tile in a parralel manner
+///
+///This initiates a newly created [TileBundle](TileBundle) in a parralel manner
 #[allow(dead_code)]
 pub fn init_tile_par(
     mut commands: Commands,
@@ -130,13 +129,13 @@ pub fn init_tile_par(
         commands.entity(entity).remove::<Uninitiated>();
     }
 }
-///This initiates a newly created tile in a sequential manner
+///This initiates a newly created [TileBundle](TileBundle) in a sequential manner
 pub fn init_tile_seq(
     mut commands: Commands,
     mut query: Query<(Entity, &TileSettings, &mut TileData, &mut Visible), With<Uninitiated>>,
 ) {
     //Honestly, there shouldn't be two sets of new tiles in the same frame but to be safe
-    //Also, this could belong in a Local, but i don't even know if it's a perf improvement
+    //Also, this could belong in a Local, but i don't even know if it'll be a perf improvement
     let mut hm: HashMap<(u32, u32), Vec<u8>> = HashMap::default();
 
     for (entity, tile_settings, mut tile_data, mut visible) in query.iter_mut() {
@@ -171,27 +170,32 @@ pub fn init_tile_seq(
         commands.entity(entity).remove::<Uninitiated>();
     }
 }
+///This function updates the [Texture](Texture) of [ColorMaterial](ColorMaterial)s used by [TileBundle](TileBundle)s when their [TileData](TileData) is changed
 pub fn update_textures_for_changed_tile_data(
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     query: Query<(&TileSettings, &TileData, &Handle<ColorMaterial>), Changed<TileData>>,
     mut app_state: ResMut<State<AppState>>,
 ) {
-    println!("Called update_textures_for_changed_tile_data:");
+    //This is a counter to tell if the query had anything to run on
     let mut count: u32 = 0;
     for (tile_settings, tile_data, material_handle) in query.iter() {
         //This shouldn't fail really, i shouldn't delete any of them anywhere
         let material = materials.get_mut(material_handle).unwrap();
+        //Add this texture to the resource and get the handle back
         let texture_handle = textures.add(Texture::new(
             Extent3d::new(tile_settings.tile_width, tile_settings.tile_height, 1),
             TextureDimension::D2,
             tile_data.data.clone(),
             TextureFormat::Rgba8UnormSrgb,
         ));
+        //Set the material's texture handle
         material.texture = Some(texture_handle);
+        //Tell the counter we found changed tiles
         count += 1;
     }
-    if count != 0 {
+    //If the query ran on some tiles, on we are not in editing mode, we definetly should move to editing mode
+    if count != 0 && *app_state.current() != AppState::EditingTileSet {
         app_state.set(AppState::EditingTileSet).unwrap();
     }
 }
