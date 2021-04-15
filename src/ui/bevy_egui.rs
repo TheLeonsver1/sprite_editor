@@ -40,8 +40,7 @@ pub enum SelectedOptionsContextMenuItem {
 pub fn draw_gui(
     mut commands: Commands,
     mut ctx_menu_state: Local<UIState>,
-    mut egui_context: ResMut<EguiContext>,
-    mut app_state: ResMut<State<crate::AppState>>,
+    egui_context: ResMut<EguiContext>,
     input: Res<Input<KeyCode>>,
     selected_tileset: Option<ResMut<SelectedTileSetEntity>>,
 ) {
@@ -109,7 +108,6 @@ pub fn draw_gui(
                                         }
                                         ctx_menu_state.tileset_settings = TileSetSettings::default();
                                         ctx_menu_state.context_menu = ContextMenuState::None;
-                                        app_state.set(crate::AppState::CreateNewTileSet).unwrap();
                                         println!("Set AppState::CreateNewTileSet");
                                     }
                                 });

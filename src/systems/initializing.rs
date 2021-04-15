@@ -1,10 +1,7 @@
-use crate::{
-    data::{
-        shared_components::Uninitiated,
-        tile_entity::{TileBundle, TileData, TileSettings},
-        tileset_entity::{TileSetBundle, TileSetSettings},
-    },
-    AppState,
+use crate::data::{
+    shared_components::Uninitiated,
+    tile_entity::{TileBundle, TileData, TileSettings},
+    tileset_entity::TileSetSettings,
 };
 use bevy::{prelude::*, tasks::ComputeTaskPool};
 use bevy::{
@@ -14,6 +11,7 @@ use bevy::{
 ///Initiates a newly Created [TileSetBundle](TileSetBundle) entity and it's [TileBundle](TileBundle) children
 ///
 ///TODO: Consider moving the calling of this fn into on_enter() and on_resume() and spawn the TileSetBundle entity in here to disentangle more gui and data(this would maybe be a bit annoying and would require a resource)
+///TODO: Instead of states, mark the newest edited tileset here
 pub fn init_tileset(
     mut commands: Commands,
     query: Query<(Entity, &TileSetSettings), With<Uninitiated>>,
@@ -21,7 +19,6 @@ pub fn init_tileset(
     mut materials: ResMut<Assets<ColorMaterial>>,
     windows: Res<Windows>,
 ) {
-    //println!("Called init_tileset, {:?}", query.iter().size_hint());
     for (tileset_entity, tileset_settings) in query.iter() {
         //This should probably always succede but
         let window = windows.get_primary().unwrap();
@@ -99,12 +96,12 @@ pub fn get_scale_fit_tileset_to_screen(
 pub fn init_tile_par(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
-    mut query: Query<(Entity, &TileSettings, &mut TileData, &mut Visible), With<Uninitiated>>,
+    mut query: Query<(Entity, &TileSettings, &mut TileData), With<Uninitiated>>,
 ) {
     query.par_for_each_mut(
         &pool,
         1,
-        |(entity, tile_settings, mut tile_data, mut visible)| {
+        |(entity, tile_settings, mut tile_data /* , mut visible*/)| {
             //Creating a transparent texture once
             let mut sprite_data: Vec<u8> = Vec::with_capacity(
                 (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
@@ -118,27 +115,27 @@ pub fn init_tile_par(
                     sprite_data.push(0);
                 }
             }
-            visible.is_visible = true;
             tile_data.data = sprite_data;
             println!("{:?}", entity);
         },
     );
 
     //Remove the Unitiated component from the entity
-    for (entity, _, _, _) in query.iter_mut() {
+    for (entity, _, _) in query.iter_mut() {
         commands.entity(entity).remove::<Uninitiated>();
     }
 }
 ///This initiates a newly created [TileBundle](TileBundle) in a sequential manner
 pub fn init_tile_seq(
     mut commands: Commands,
-    mut query: Query<(Entity, &TileSettings, &mut TileData, &mut Visible), With<Uninitiated>>,
+    mut query: Query<(Entity, &TileSettings, &mut TileData), With<Uninitiated>>,
 ) {
+    //println!("update");
     //Honestly, there shouldn't be two sets of new tiles in the same frame but to be safe
     //Also, this could belong in a Local, but i don't even know if it'll be a perf improvement
     let mut hm: HashMap<(u32, u32), Vec<u8>> = HashMap::default();
 
-    for (entity, tile_settings, mut tile_data, mut visible) in query.iter_mut() {
+    for (entity, tile_settings, mut tile_data/*, mut visible*/) in query.iter_mut() {
         if let Some(texture_data) = hm.get(&(tile_settings.tile_width, tile_settings.tile_height)) {
             //Cloning existing texture data for tile_settings we already encountered
             tile_data.data = texture_data.clone();
@@ -164,38 +161,47 @@ pub fn init_tile_seq(
             //Don't forget to set the tile's data
             tile_data.data = texture_data;
         }
-        //Make the tile visible since it should be immediately rendered after this is done
-        visible.is_visible = true;
         //Remove the marker so the data won't be deleted if we decide to create a new Tileset later
         commands.entity(entity).remove::<Uninitiated>();
     }
 }
-///This function updates the [Texture](Texture) of [ColorMaterial](ColorMaterial)s used by [TileBundle](TileBundle)s when their [TileData](TileData) is changed
-pub fn update_textures_for_changed_tile_data(
-    mut textures: ResMut<Assets<Texture>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    query: Query<(&TileSettings, &TileData, &Handle<ColorMaterial>), Changed<TileData>>,
-    mut app_state: ResMut<State<AppState>>,
-) {
-    //This is a counter to tell if the query had anything to run on
-    let mut count: u32 = 0;
-    for (tile_settings, tile_data, material_handle) in query.iter() {
-        //This shouldn't fail really, i shouldn't delete any of them anywhere
-        let material = materials.get_mut(material_handle).unwrap();
-        //Add this texture to the resource and get the handle back
-        let texture_handle = textures.add(Texture::new(
-            Extent3d::new(tile_settings.tile_width, tile_settings.tile_height, 1),
-            TextureDimension::D2,
-            tile_data.data.clone(),
-            TextureFormat::Rgba8UnormSrgb,
-        ));
-        //Set the material's texture handle
-        material.texture = Some(texture_handle);
-        //Tell the counter we found changed tiles
-        count += 1;
+
+/*
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::SystemLabels;
+    use bevy::prelude::*;
+
+    #[test]
+    #[should_panic]
+    fn did_init_tileset() {
+        let mut world = World::default();
+        world.insert_resource(Assets::<Texture>::);
+        let mut update_stage = SystemStage::parallel();
+        //Create the default tileset settings
+        let tileset_settings = TileSetSettings::default();
+        let entity = world
+            .spawn()
+            .insert_bundle(TileSetBundle::new(tileset_settings))
+            .id();
+        //Checks whether the TileSetBundle has the marker componet by default
+        assert!(world.get::<Uninitiated>(entity).is_some());
+        update_stage.add_system(init_tileset.system().label(SystemLabels::InitTileset));
+        update_stage.run(&mut world);
+        assert!(world.get::<Uninitiated>(entity).is_none());
+        update_stage.add_system(
+            init_tile_seq
+                .system()
+                .label(SystemLabels::InitTile)
+                .after(SystemLabels::InitTile),
+        );
+        //world.
+        //let mut state
+        //let mut
     }
-    //If the query ran on some tiles, on we are not in editing mode, we definetly should move to editing mode
-    if count != 0 && *app_state.current() != AppState::EditingTileSet {
-        app_state.set(AppState::EditingTileSet).unwrap();
+    fn try_app_buidler() {
+        let app = AppBuilder::default().add_plugins(DefaultPlugins).run();
     }
 }
+*/

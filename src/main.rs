@@ -6,16 +6,19 @@ use bevy::{
     },
 };
 use bevy::{ecs::component::StorageType, prelude::*, reflect::TypeUuid};
+use bevy_common::{core::marker_components::MainCamera, input::bundles::MainCameraBundle};
 use bevy_egui::EguiPlugin;
 use bevy_prototype_lyon::prelude::*;
 
 mod data;
 mod systems;
 mod ui;
-use data::shared_components::Uninitiated;
-use systems::initializing::*;
+use data::{
+    shared_components::Uninitiated, tile_entity::TileBundle, tileset_entity::TileSetBundle,
+};
+use systems::{initializing::*, tileset_editing::*};
 
-///The default font for the app, everything should use this
+///TODO: The default font for the app, everything should use this
 pub const DEFAULT_FONT: &str = "Roboto-Regular.ttf";
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 ///The app's current state
@@ -30,10 +33,19 @@ pub enum AppState {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemLabel)]
 enum SystemLabels {
     DrawGui,
+    DrawSomething,
     InitTileset,
     InitTile,
     ChangeTileData,
     UpdateTexturesForVisual,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]
+enum StageLabels {
+    ///Initialize the newly created [TileSetBundle](TileSetBundle)
+    InitalizeTileSet,
+    ///Initialize the newly created [TileBundle](TileBundle)
+    InitializeTiles,
+    UpdateTiles,
 }
 fn main() {
     AppBuilder::default()
@@ -58,27 +70,34 @@ fn main() {
                 .system()
                 .label(SystemLabels::DrawGui),
         )
-        //Start the application logic that is dependent on state
-        .add_state(AppState::Empty)
-        .add_system_set(
-            SystemSet::on_update(AppState::CreateNewTileSet)
-                .with_system(init_tileset.system().label(SystemLabels::InitTileset))
-                .with_system(
-                    init_tile_seq
-                        .system()
-                        .label(SystemLabels::InitTile)
-                        .after(SystemLabels::InitTileset),
-                )
+        .add_stage_after(
+            CoreStage::Update,
+            StageLabels::InitalizeTileSet,
+            SystemStage::single_threaded().with_system(init_tileset.system()),
+        )
+        //Initialize the newly created tiles
+        .add_stage_after(
+            StageLabels::InitalizeTileSet,
+            StageLabels::InitializeTiles,
+            SystemStage::single_threaded().with_system(init_tile_seq.system()),
+        )
+        //This is the stage where we can actually use the app
+        .add_stage_after(
+            StageLabels::InitializeTiles,
+            StageLabels::UpdateTiles,
+            SystemStage::parallel()
+                .with_system(use_brush.system().label(SystemLabels::DrawSomething))
                 .with_system(
                     update_textures_for_changed_tile_data
                         .system()
                         .label(SystemLabels::UpdateTexturesForVisual)
-                        .after(SystemLabels::InitTile),
+                        .after(SystemLabels::DrawSomething),
+                )
+                .with_system(bevy_common::input::systems::move_camera_with_wasd.system())
+                .with_system(
+                    bevy_common::input::systems::zoom_in_camera_with_mouse_scroll.system(),
                 ),
         )
-        .add_system_set(SystemSet::on_update(AppState::EditingTileSet))
-        //.add_system_set(add_init_systems_to_system_set(SystemSet::on_resume(AppState::CreateNewTileSet)))
-        //.add_system_set(SystemSet::on_update(AppState::EditingTileSet).with_system(update_textures_for_changed_tile_data.system().label(SystemLabels::UpdateTexturesForVisual)))
         .run();
 }
 pub const CUSTOM_SPRITE_PIPELINE_HANDLE: HandleUntyped =
@@ -106,7 +125,9 @@ fn setup_tile_pipeline(
 ///Spawns The Cameras Needed for the editor
 fn spawn_cameras_system(mut commands: Commands) {
     //Spawning the camera
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands
+        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert_bundle(MainCameraBundle::default());
     commands.spawn_bundle(GeometryBuilder::build_as(
         &shapes::Circle {
             radius: 20.0,

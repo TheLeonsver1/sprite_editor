@@ -37,7 +37,7 @@ impl Default for TileSetSettings {
 }
 impl TileSetSettings {
     ///Creates a tileset for a single sprite
-    fn single_tile() -> Self {
+    pub fn single_tile() -> Self {
         Self {
             tile_width: 256,
             tile_height: 256,
@@ -45,9 +45,8 @@ impl TileSetSettings {
             tileset_width: 10,
         }
     }
-    #[allow(dead_code)]
     ///Creates a tileset made out of multiple sprites
-    fn multiple_tiles() -> Self {
+    pub fn multiple_tiles() -> Self {
         Self {
             tile_width: 32,
             tile_height: 32,

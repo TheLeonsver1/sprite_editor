@@ -18,10 +18,6 @@ impl Default for TileBundle {
                 render_pipelines: RenderPipelines::from_pipelines(vec![RenderPipeline::new(
                     crate::CUSTOM_SPRITE_PIPELINE_HANDLE.typed(),
                 )]),
-                visible: Visible {
-                    is_visible: false,
-                    ..Default::default()
-                },
                 ..Default::default()
             },
             data: TileData::default(),
