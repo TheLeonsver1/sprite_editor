@@ -6,7 +6,13 @@ use bevy::{
     },
 };
 use bevy::{ecs::component::StorageType, prelude::*, reflect::TypeUuid};
-use bevy_common::{core::marker_components::MainCamera, input::bundles::MainCameraBundle};
+use bevy_common::input::{
+    bundles::{CommonCameraBundle, MainCameraBundle},
+    data_components::{CameraMoveSpeed, CameraZoomLimit},
+    events::MouseDragEvent,
+    resources::MouseWorldPosition,
+    systems::*,
+};
 use bevy_egui::EguiPlugin;
 use bevy_prototype_lyon::prelude::*;
 
@@ -33,6 +39,8 @@ pub enum AppState {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemLabel)]
 enum SystemLabels {
     DrawGui,
+    GetMousePos,
+    TrackMiddleMouseDragging,
     DrawSomething,
     InitTileset,
     InitTile,
@@ -82,21 +90,43 @@ fn main() {
             SystemStage::single_threaded().with_system(init_tile_seq.system()),
         )
         //This is the stage where we can actually use the app
+        //We need a mouse world position resource for this
+        .insert_resource(MouseWorldPosition::default())
+        .add_event::<MouseDragEvent>()
         .add_stage_after(
             StageLabels::InitializeTiles,
             StageLabels::UpdateTiles,
             SystemStage::parallel()
-                .with_system(use_brush.system().label(SystemLabels::DrawSomething))
+                .with_system(
+                    get_mouse_world_position
+                        .system()
+                        .label(SystemLabels::GetMousePos),
+                )
+                .with_system(
+                    track_middle_mouse_dragging
+                        .system()
+                        .label(SystemLabels::TrackMiddleMouseDragging)
+                        .after(SystemLabels::GetMousePos),
+                )
+                .with_system(
+                    use_brush
+                        .system()
+                        .label(SystemLabels::DrawSomething)
+                        .after(SystemLabels::GetMousePos),
+                )
                 .with_system(
                     update_textures_for_changed_tile_data
                         .system()
                         .label(SystemLabels::UpdateTexturesForVisual)
                         .after(SystemLabels::DrawSomething),
                 )
-                .with_system(bevy_common::input::systems::move_camera_with_wasd.system())
                 .with_system(
-                    bevy_common::input::systems::zoom_in_camera_with_mouse_scroll.system(),
-                ),
+                    move_camera_with_middle_mouse_drag
+                        .system()
+                        .after(SystemLabels::TrackMiddleMouseDragging),
+                )
+                .with_system(move_camera_with_wasd_scaled_by_zoom.system())
+                .with_system(zoom_in_camera_with_mouse_scroll.system()),
         )
         .run();
 }
@@ -127,7 +157,17 @@ fn spawn_cameras_system(mut commands: Commands) {
     //Spawning the camera
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
-        .insert_bundle(MainCameraBundle::default());
+        .insert_bundle(MainCameraBundle {
+            common_camera: CommonCameraBundle {
+                move_speed: CameraMoveSpeed { speed: 650.0 },
+                zoom_limit: CameraZoomLimit {
+                    max_zoom: Vec3::new(0.05, 0.05, 1.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
     commands.spawn_bundle(GeometryBuilder::build_as(
         &shapes::Circle {
             radius: 20.0,

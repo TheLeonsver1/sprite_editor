@@ -98,27 +98,21 @@ pub fn init_tile_par(
     pool: Res<ComputeTaskPool>,
     mut query: Query<(Entity, &TileSettings, &mut TileData), With<Uninitiated>>,
 ) {
-    query.par_for_each_mut(
-        &pool,
-        1,
-        |(entity, tile_settings, mut tile_data /* , mut visible*/)| {
-            //Creating a transparent texture once
-            let mut sprite_data: Vec<u8> = Vec::with_capacity(
-                (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
-            );
-            //Going in reverse because in textures y is higher at the bottom
-            for _y_tile in (0..tile_settings.tile_height).rev() {
-                for _x_tile in 0..tile_settings.tile_width {
-                    sprite_data.push(255);
-                    sprite_data.push(255);
-                    sprite_data.push(255);
-                    sprite_data.push(0);
-                }
+    query.par_for_each_mut(&pool, 100, |(entity, tile_settings, mut tile_data)| {
+        //Creating a transparent texture once
+        let mut sprite_data: Vec<u8> =
+            Vec::with_capacity((tile_settings.tile_width * tile_settings.tile_height * 4) as usize);
+        //Going in reverse because in textures y is higher at the bottom
+        for _y_tile in (0..tile_settings.tile_height).rev() {
+            for _x_tile in 0..tile_settings.tile_width {
+                sprite_data.push(255);
+                sprite_data.push(255);
+                sprite_data.push(255);
+                sprite_data.push(0);
             }
-            tile_data.data = sprite_data;
-            println!("{:?}", entity);
-        },
-    );
+        }
+        tile_data.data = sprite_data;
+    });
 
     //Remove the Unitiated component from the entity
     for (entity, _, _) in query.iter_mut() {
