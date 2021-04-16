@@ -98,7 +98,7 @@ fn main() {
         .add_stage_after(
             StageLabels::InitalizeTileSet,
             StageLabels::InitializeTiles,
-            SystemStage::single_threaded().with_system(init_tile_seq.system()),
+            SystemStage::single_threaded().with_system(init_tile_par.system()),
         )
         //Here we set the currently selected view
         .add_stage_after(

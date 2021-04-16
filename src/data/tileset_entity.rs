@@ -38,7 +38,7 @@ pub struct TileSetSettings {
 //The default would be a single sprite
 impl Default for TileSetSettings {
     fn default() -> Self {
-        Self::single_tile()
+        Self::multiple_tiles()
     }
 }
 impl TileSetSettings {
@@ -54,10 +54,10 @@ impl TileSetSettings {
     ///Creates a tileset made out of multiple sprites
     pub fn multiple_tiles() -> Self {
         Self {
-            tile_width: 32,
-            tile_height: 32,
-            tileset_height: 10,
-            tileset_width: 10,
+            tile_width: 256,
+            tile_height: 256,
+            tileset_height: 50,
+            tileset_width: 50,
         }
     }
 }
