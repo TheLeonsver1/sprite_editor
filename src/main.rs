@@ -94,24 +94,24 @@ fn main() {
             StageLabels::InitalizeTileSet,
             SystemStage::single_threaded().with_system(init_tileset.system()),
         )
-        //Here we set the currently selected view
-        .add_stage_after(
-            StageLabels::InitalizeTileSet,
-            StageLabels::UpdateView,
-            SystemStage::single_threaded().with_system(update_selected_tileset.system()),
-        )
         //Initialize the newly created tiles
         .add_stage_after(
-            StageLabels::UpdateView,
+            StageLabels::InitalizeTileSet,
             StageLabels::InitializeTiles,
             SystemStage::single_threaded().with_system(init_tile_seq.system()),
+        )
+        //Here we set the currently selected view
+        .add_stage_after(
+            StageLabels::InitializeTiles,
+            StageLabels::UpdateView,
+            SystemStage::single_threaded().with_system(update_selected_tileset.system()),
         )
         //This is the stage where we can actually use the app
         //We need a mouse world position resource for this
         .insert_resource(MouseWorldPosition::default())
         .add_event::<MouseDragEvent>()
         .add_stage_after(
-            StageLabels::InitializeTiles,
+            StageLabels::UpdateView,
             StageLabels::UpdateTiles,
             SystemStage::parallel()
                 .with_system(

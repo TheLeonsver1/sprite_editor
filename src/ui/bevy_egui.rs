@@ -1,9 +1,9 @@
-use bevy::{prelude::*, utils::HashSet};
+use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 
 use crate::data::{
-    resources::SelectedTileSetEntity,
-    tileset_entity::{TileSetBundle, TileSetSettings},
+    shared_components::CurrentlySelected,
+    tileset_entity::{NewlySelected, TileSetBundle, TileSetName, TileSetSettings},
 };
 ///The Current Selection of the Context Menu
 #[derive(PartialEq, Eq, Debug)]
@@ -34,7 +34,10 @@ pub fn draw_gui(
     mut commands: Commands,
     mut ctx_menu_state: Local<ContextMenuState>,
     mut new_tileset_window_data: Local<TileSetSettings>,
-    mut tileset_entities: Local<HashSet<Entity>>,
+    mut tileset_entities: Local<Vec<Entity>>,
+    mut tileset_entity_names_query: Query<&mut TileSetName>,
+    selected_tileset_entity_query: Query<&CurrentlySelected>,
+    mut added_tilesets: Local<u32>,
     egui_context: ResMut<EguiContext>,
     input: Res<Input<KeyCode>>,
 ) {
@@ -88,14 +91,12 @@ pub fn draw_gui(
                                     });
                                     //If we confirmed the creation of a new tileset
                                     if ui.button("Create new").clicked(){
-                                        println!("Clicked Create New");
                                         //Spawn a TileSet Entity
-                                        //TODO: Spawn A tileset
-                                        let new_tileset_entity = commands.spawn_bundle(TileSetBundle::new(*new_tileset_window_data)).id();
-                                        tileset_entities.insert(new_tileset_entity);
+                                        let new_tileset_entity = commands.spawn_bundle(TileSetBundle::new(*new_tileset_window_data,*added_tilesets + 1)).id();
+                                        tileset_entities.push(new_tileset_entity);
                                         *new_tileset_window_data = TileSetSettings::default();
                                         *ctx_menu_state = ContextMenuState::None;
-                                        println!("Set AppState::CreateNewTileSet");
+                                        *added_tilesets += 1;
                                     }
                                 });
                             });
@@ -107,6 +108,29 @@ pub fn draw_gui(
                     }
                     //This can't happen since it's checked above but rust is weird
                     ContextMenuState::None => {}
+                }
+            });
+        });
+    }
+
+    //If there are tileset entities
+    if tileset_entities.len() > 0 {
+        //Show a tab view of them
+        egui::TopPanel::top("tabs").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                for entity in tileset_entities.iter() {
+                    if let Ok(mut tileset_name) = tileset_entity_names_query.get_mut(*entity) {
+                        if ui
+                            .selectable_label(
+                                selected_tileset_entity_query.get(*entity).is_ok(),
+                                tileset_name.name.clone(),
+                            )
+                            .clicked()
+                            && selected_tileset_entity_query.get(*entity).is_err()
+                        {
+                            commands.entity(*entity).insert(NewlySelected);
+                        }
+                    }
                 }
             });
         });

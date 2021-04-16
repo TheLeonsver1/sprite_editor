@@ -17,9 +17,12 @@ pub struct TileSetBundle {
     newly_selected: NewlySelected,
 }
 impl TileSetBundle {
-    pub fn new(tileset_settings: TileSetSettings) -> Self {
+    pub fn new(tileset_settings: TileSetSettings, index: u32) -> Self {
+        let mut name = "Tileset ".to_string();
+        name.push_str(&u32::to_string(&index));
         Self {
             tileset_settings,
+            tileset_name: TileSetName { name },
             ..Default::default()
         }
     }
@@ -59,9 +62,17 @@ impl TileSetSettings {
     }
 }
 ///The view of this tileset's camera, it's "tab" information basically, it's the last information before we switched to edit something else
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TileSetView {
     pub camera_transform: Transform,
+}
+impl Default for TileSetView {
+    fn default() -> Self {
+        let far = 1000.0;
+        Self {
+            camera_transform: Transform::from_xyz(0.0, 0.0, far - 0.1),
+        }
+    }
 }
 #[derive(Debug, Default)]
 pub struct TileSetName {

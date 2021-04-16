@@ -96,7 +96,7 @@ pub fn init_tile_par(
     pool: Res<ComputeTaskPool>,
     mut query: Query<(Entity, &TileSettings, &mut TileData), With<Uninitiated>>,
 ) {
-    query.par_for_each_mut(&pool, 100, |(entity, tile_settings, mut tile_data)| {
+    query.par_for_each_mut(&pool, 100, |(_entity, tile_settings, mut tile_data)| {
         //Creating a transparent texture once
         let mut sprite_data: Vec<u8> =
             Vec::with_capacity((tile_settings.tile_width * tile_settings.tile_height * 4) as usize);
@@ -122,7 +122,6 @@ pub fn init_tile_seq(
     mut commands: Commands,
     mut query: Query<(Entity, &TileSettings, &mut TileData), With<Uninitiated>>,
 ) {
-    //println!("update");
     //Honestly, there shouldn't be two sets of new tiles in the same frame but to be safe
     //Also, this could belong in a Local, but i don't even know if it'll be a perf improvement
     let mut hm: HashMap<(u32, u32), Vec<u8>> = HashMap::default();

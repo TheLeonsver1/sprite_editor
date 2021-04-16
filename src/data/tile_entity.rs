@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::pipeline::RenderPipeline;
 
-use super::shared_components::{CurrentlySelected, Uninitiated};
+use super::shared_components::Uninitiated;
 //A visual representation of a single tile/sprite
 #[derive(Bundle, Clone)]
 pub struct TileBundle {
@@ -11,7 +11,6 @@ pub struct TileBundle {
     pub data: TileData,
     pub uninitiated: Uninitiated,
     pub name: TileName,
-    pub currently_selected: CurrentlySelected,
 }
 impl Default for TileBundle {
     fn default() -> Self {
@@ -26,7 +25,6 @@ impl Default for TileBundle {
             tile_settings: TileSettings::default(),
             uninitiated: Uninitiated::default(),
             name: TileName::default(),
-            currently_selected: CurrentlySelected::default(),
         }
     }
 }

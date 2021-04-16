@@ -5,7 +5,7 @@ use bevy::{
 use bevy_common::input::marker_components::MainCamera;
 
 use crate::data::{
-    shared_components::{CurrentlySelected, Uninitiated},
+    shared_components::CurrentlySelected,
     tile_entity::{TileData, TileSettings},
     tileset_entity::{NewlySelected, TileSetView},
 };
@@ -17,7 +17,6 @@ pub fn update_textures_for_changed_tile_data(
     query: Query<
         (&TileSettings, &TileData, &Handle<ColorMaterial>),
         (
-            Without<Uninitiated>,
             With<CurrentlySelected>, //This should be redundant since Changed<TileData> should be only for currently selected tiles but whatever, i don't think this hurts
             Changed<TileData>,
         ),
@@ -48,9 +47,13 @@ pub fn update_selected_tileset(
         (Entity, &TileSetView),
         (With<NewlySelected>, Without<CurrentlySelected>),
     >,
+    mut currently_unselected_children_query: Query<
+        (Entity, &Parent, &mut Visible),
+        (With<TileSettings>, Without<CurrentlySelected>),
+    >,
     mut currently_selected_query: Query<(Entity, &mut TileSetView), With<CurrentlySelected>>,
     mut currently_selected_children_query: Query<
-        (Entity, &Parent, &mut Visible),
+        (Entity, &mut Visible),
         (With<TileSettings>, With<CurrentlySelected>),
     >,
 ) {
@@ -62,12 +65,8 @@ pub fn update_selected_tileset(
         if let Ok((currently_selected_tileset_ent, mut currently_selected_tileset_view)) =
             currently_selected_query.single_mut()
         {
-            //Filter the query on children that their parent is the one selected before
-            let filtered = currently_selected_children_query
-                .iter_mut()
-                .filter(|(_entity, parent, _visible)| parent.0 == currently_selected_tileset_ent);
             //For each child of this parent
-            for (entity, _parent, mut visible) in filtered.into_iter() {
+            for (entity, mut visible) in currently_selected_children_query.iter_mut() {
                 //Make these children transparent
                 visible.is_visible = false;
                 //Remove their currently selected marker so our queries will run on less Tiles
@@ -91,5 +90,15 @@ pub fn update_selected_tileset(
             .remove::<NewlySelected>()
             //Then add it a currently selected flag
             .insert(CurrentlySelected);
+        //Filter the query on children that their parent is the one newly selected
+        let filtered = currently_unselected_children_query
+            .iter_mut()
+            .filter(|(_entity, parent, _visible)| parent.0 == newly_selected_tileset_ent);
+        for (entity, _parent, mut visible) in filtered.into_iter() {
+            //Mark the child selected
+            commands.entity(entity).insert(CurrentlySelected);
+            //Make the child visible
+            visible.is_visible = true;
+        }
     }
 }
