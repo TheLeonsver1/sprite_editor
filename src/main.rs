@@ -109,6 +109,11 @@ fn main() {
                         .after(SystemLabels::GetMousePos),
                 )
                 .with_system(
+                    move_camera_with_middle_mouse_drag
+                        .system()
+                        .after(SystemLabels::TrackMiddleMouseDragging),
+                )
+                .with_system(
                     use_brush
                         .system()
                         .label(SystemLabels::DrawSomething)
@@ -119,11 +124,6 @@ fn main() {
                         .system()
                         .label(SystemLabels::UpdateTexturesForVisual)
                         .after(SystemLabels::DrawSomething),
-                )
-                .with_system(
-                    move_camera_with_middle_mouse_drag
-                        .system()
-                        .after(SystemLabels::TrackMiddleMouseDragging),
                 )
                 .with_system(move_camera_with_wasd_scaled_by_zoom.system())
                 .with_system(zoom_in_camera_with_mouse_scroll.system()),
