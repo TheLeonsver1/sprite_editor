@@ -14,6 +14,7 @@ pub struct TileSetBundle {
     global_transform: GlobalTransform,
     tileset_view: TileSetView,
     tileset_name: TileSetName,
+    newly_selected: NewlySelected,
 }
 impl TileSetBundle {
     pub fn new(tileset_settings: TileSetSettings) -> Self {
@@ -66,3 +67,7 @@ pub struct TileSetView {
 pub struct TileSetName {
     pub name: String,
 }
+
+///This is a marker to help us know which [TileSetBundle](TileSetBundle) is currently viewed
+#[derive(Debug, Default)]
+pub struct NewlySelected;

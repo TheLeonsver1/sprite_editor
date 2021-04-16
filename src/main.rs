@@ -20,7 +20,9 @@ mod data;
 mod systems;
 mod ui;
 use data::{
-    shared_components::Uninitiated, tile_entity::TileBundle, tileset_entity::TileSetBundle,
+    shared_components::{CurrentlySelected, Uninitiated},
+    tile_entity::TileBundle,
+    tileset_entity::{NewlySelected, TileSetBundle},
 };
 use systems::{initializing::*, tileset_editing::*};
 
@@ -51,6 +53,8 @@ enum SystemLabels {
 enum StageLabels {
     ///Initialize the newly created [TileSetBundle](TileSetBundle)
     InitalizeTileSet,
+    ///Updates the currently selected [TileSetBundle](TileSetBundle)
+    UpdateView,
     ///Initialize the newly created [TileBundle](TileBundle)
     InitializeTiles,
     UpdateTiles,
@@ -70,6 +74,12 @@ fn main() {
         .register_component(ComponentDescriptor::new::<Uninitiated>(
             StorageType::SparseSet,
         ))
+        .register_component(ComponentDescriptor::new::<NewlySelected>(
+            StorageType::SparseSet,
+        ))
+        .register_component(ComponentDescriptor::new::<CurrentlySelected>(
+            StorageType::SparseSet,
+        ))
         .add_startup_system(spawn_cameras_system.system())
         .add_startup_system(setup_tile_pipeline.system())
         //We always need our gui to be drawn
@@ -78,14 +88,21 @@ fn main() {
                 .system()
                 .label(SystemLabels::DrawGui),
         )
+        //Here we initiallize our newly created tileset
         .add_stage_after(
             CoreStage::Update,
             StageLabels::InitalizeTileSet,
             SystemStage::single_threaded().with_system(init_tileset.system()),
         )
-        //Initialize the newly created tiles
+        //Here we set the currently selected view
         .add_stage_after(
             StageLabels::InitalizeTileSet,
+            StageLabels::UpdateView,
+            SystemStage::single_threaded().with_system(update_selected_tileset.system()),
+        )
+        //Initialize the newly created tiles
+        .add_stage_after(
+            StageLabels::UpdateView,
             StageLabels::InitializeTiles,
             SystemStage::single_threaded().with_system(init_tile_seq.system()),
         )

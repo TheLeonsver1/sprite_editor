@@ -3,11 +3,8 @@ use crate::data::{
     tile_entity::{TileBundle, TileData, TileSettings},
     tileset_entity::TileSetSettings,
 };
+use bevy::utils::HashMap;
 use bevy::{prelude::*, tasks::ComputeTaskPool};
-use bevy::{
-    render::texture::{Extent3d, TextureDimension, TextureFormat},
-    utils::HashMap,
-};
 ///Initiates a newly Created [TileSetBundle](TileSetBundle) entity and it's [TileBundle](TileBundle) children
 ///
 ///TODO: Consider moving the calling of this fn into on_enter() and on_resume() and spawn the TileSetBundle entity in here to disentangle more gui and data(this would maybe be a bit annoying and would require a resource)
