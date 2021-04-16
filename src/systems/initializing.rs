@@ -66,6 +66,7 @@ pub fn init_tileset(
         //Don't forget to remove the marker component so this function won't run for it again if another tileset is created
         commands.entity(tileset_entity).remove::<Uninitiated>();
     }
+    //TODO: Make all other tilesets invisible and set their view based on current camera position
 }
 ///Calculates the total size of the [TileSetBundle](TileSetBundle)
 pub fn get_total_tileset_size(tileset_settings: &TileSetSettings) -> (f32, f32) {

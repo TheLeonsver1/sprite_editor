@@ -10,6 +10,7 @@ pub struct TileBundle {
     pub tile_settings: TileSettings,
     pub data: TileData,
     pub uninitiated: Uninitiated,
+    pub name: TileName,
 }
 impl Default for TileBundle {
     fn default() -> Self {
@@ -23,6 +24,7 @@ impl Default for TileBundle {
             data: TileData::default(),
             tile_settings: TileSettings::default(),
             uninitiated: Uninitiated::default(),
+            name: TileName::default(),
         }
     }
 }
@@ -48,4 +50,10 @@ pub struct TileData {
 pub struct TileSettings {
     pub tile_width: u32,
     pub tile_height: u32,
+}
+
+///A [TileBundle](TileBundle)'s name
+#[derive(Debug, Default, Clone)]
+pub struct TileName {
+    pub name: String,
 }

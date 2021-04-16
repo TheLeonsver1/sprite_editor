@@ -12,6 +12,8 @@ pub struct TileSetBundle {
     uninitiated: Uninitiated,
     transform: Transform,
     global_transform: GlobalTransform,
+    tileset_view: TileSetView,
+    tileset_name: TileSetName,
 }
 impl TileSetBundle {
     pub fn new(tileset_settings: TileSetSettings) -> Self {
@@ -21,8 +23,8 @@ impl TileSetBundle {
         }
     }
 }
-///The basic info of the tileset, a collection of unique tiles
-#[derive(Debug, Clone, Copy)]
+///The basic info of the [TileSetBundle](TileSetBundle)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileSetSettings {
     pub tile_width: u32,
     pub tile_height: u32,
@@ -39,10 +41,10 @@ impl TileSetSettings {
     ///Creates a tileset for a single sprite
     pub fn single_tile() -> Self {
         Self {
-            tile_width: 256,
-            tile_height: 256,
-            tileset_height: 10,
-            tileset_width: 10,
+            tile_width: 32,
+            tile_height: 32,
+            tileset_height: 1,
+            tileset_width: 1,
         }
     }
     ///Creates a tileset made out of multiple sprites
@@ -54,4 +56,13 @@ impl TileSetSettings {
             tileset_width: 10,
         }
     }
+}
+///The view of this tileset's camera, it's "tab" information basically, it's the last information before we switched to edit something else
+#[derive(Debug, Default)]
+pub struct TileSetView {
+    pub camera_transform: Transform,
+}
+#[derive(Debug, Default)]
+pub struct TileSetName {
+    pub name: String,
 }
