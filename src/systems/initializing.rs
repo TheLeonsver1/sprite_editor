@@ -163,24 +163,6 @@ pub fn init_tile_seq(
     }
 }
 
-pub fn recalculate_tile_rect(
-    mut query: Query<(&GlobalTransform, &TileSettings, &mut TileRect), Changed<GlobalTransform>>,
-) {
-    for (global_transform, tile_settings, mut tile_rect) in query.iter_mut() {
-        let half_tile_width = tile_settings.tile_width as f32 / 2.0;
-        let half_tile_height = tile_settings.tile_height as f32 / 2.0;
-        //Tile
-        tile_rect.left =
-            global_transform.translation.x - half_tile_width * global_transform.scale.x;
-        tile_rect.right =
-            global_transform.translation.x + half_tile_width * global_transform.scale.x;
-        tile_rect.top =
-            global_transform.translation.y + half_tile_height * global_transform.scale.y;
-        tile_rect.bottom =
-            global_transform.translation.y - half_tile_height * global_transform.scale.y;
-    }
-}
-
 /*
 #[cfg(test)]
 mod tests {
