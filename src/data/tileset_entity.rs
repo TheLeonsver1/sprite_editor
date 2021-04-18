@@ -1,5 +1,6 @@
 use super::shared_components::Uninitiated;
 use bevy::{prelude::*, utils::HashMap};
+use bevy_common::input::data_components::CameraZoomLimit;
 #[derive(Debug, Default)]
 pub struct OpenDocumentsMap {
     pub document_map: HashMap<usize, TileSetSettings>,
@@ -38,7 +39,7 @@ pub struct TileSetSettings {
 //The default would be a single sprite
 impl Default for TileSetSettings {
     fn default() -> Self {
-        Self::single_tile()
+        Self::multiple_tiles()
     }
 }
 impl TileSetSettings {
@@ -65,12 +66,14 @@ impl TileSetSettings {
 #[derive(Debug)]
 pub struct TileSetView {
     pub camera_transform: Transform,
+    pub camera_zoom_limits: CameraZoomLimit,
 }
 impl Default for TileSetView {
     fn default() -> Self {
         let far = 1000.0;
         Self {
             camera_transform: Transform::from_xyz(0.0, 0.0, far - 0.1),
+            camera_zoom_limits: CameraZoomLimit::default(),
         }
     }
 }

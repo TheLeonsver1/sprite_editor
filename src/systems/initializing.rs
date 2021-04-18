@@ -1,26 +1,33 @@
 use crate::data::{
     shared_components::Uninitiated,
-    tile_entity::{TileBundle, TileData, TileSettings},
-    tileset_entity::TileSetSettings,
+    tile_entity::{TileBundle, TileData, TileRect, TileSettings},
+    tileset_entity::{TileSetSettings, TileSetView},
 };
 use bevy::utils::HashMap;
 use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy_common::input::data_components::CameraZoomLimit;
 ///Initiates a newly Created [TileSetBundle](TileSetBundle) entity and it's [TileBundle](TileBundle) children
-///
-///TODO: Consider moving the calling of this fn into on_enter() and on_resume() and spawn the TileSetBundle entity in here to disentangle more gui and data(this would maybe be a bit annoying and would require a resource)
-///TODO: Instead of states, mark the newest edited tileset here
 pub fn init_tileset(
     mut commands: Commands,
-    query: Query<(Entity, &TileSetSettings), With<Uninitiated>>,
+    mut query: Query<(Entity, &TileSetSettings, &mut TileSetView), With<Uninitiated>>,
     mut textures: ResMut<Assets<Texture>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     windows: Res<Windows>,
 ) {
-    for (tileset_entity, tileset_settings) in query.iter() {
+    for (tileset_entity, tileset_settings, mut tileset_view) in query.iter_mut() {
         //This should probably always succede but
         let window = windows.get_primary().unwrap();
+        //Get The scale to fit the tileset to screen
         let scale =
             get_scale_fit_tileset_to_screen(tileset_settings, window.width(), window.height());
+        //Each tileset stores it's camera's settings
+        //We want the tileset's camera to zoom to certain limits, since each tileset has a different size that means
+        //We Currently only set this up at the tileset's creation
+        //TODO: If the Edit context menu will allow to change tileset size, this ^ would need to be updated
+        tileset_view.camera_zoom_limits = CameraZoomLimit {
+            max_zoom: Vec3::new(scale / 10.0, scale / 10.0, 1.0),
+            min_zoom: Vec3::new(1.0, 1.0, 1.0),
+        };
         //TODO: Disable 1 pixel sprite creation
         let texture = Texture::default();
         commands
@@ -63,7 +70,6 @@ pub fn init_tileset(
         //Don't forget to remove the marker component so this function won't run for it again if another tileset is created
         commands.entity(tileset_entity).remove::<Uninitiated>();
     }
-    //TODO: Make all other tilesets invisible and set their view based on current camera position
 }
 ///Calculates the total size of the [TileSetBundle](TileSetBundle)
 pub fn get_total_tileset_size(tileset_settings: &TileSetSettings) -> (f32, f32) {
@@ -87,7 +93,7 @@ pub fn get_scale_fit_tileset_to_screen(
     }
     1.0 / percent
 }
-///FIXME:(maybe) This crashes for some reason
+///FIXME: When this commit: https://github.com/bevyengine/bevy/pull/1945 is merged, change to this instead of init_tile_seq?
 ///
 ///This initiates a newly created [TileBundle](TileBundle) in a parralel manner
 #[allow(dead_code)]
@@ -135,7 +141,7 @@ pub fn init_tile_seq(
             let mut texture_data = Vec::<u8>::with_capacity(
                 (tile_settings.tile_width * tile_settings.tile_height * 4) as usize,
             );
-            //TODO: This could be a one dimensional loop, replace it after you copied into the brush mechanism
+            //TODO: This could be a one dimensional loop, maybe replace it after you copied into the pencil mechanism
             for _y_tile in (0..tile_settings.tile_height).rev() {
                 for _x_tile in 0..tile_settings.tile_width {
                     texture_data.push(255);
@@ -154,6 +160,24 @@ pub fn init_tile_seq(
         }
         //Remove the marker so the data won't be deleted if we decide to create a new Tileset later
         commands.entity(entity).remove::<Uninitiated>();
+    }
+}
+
+pub fn recalculate_tile_rect(
+    mut query: Query<(&GlobalTransform, &TileSettings, &mut TileRect), Changed<GlobalTransform>>,
+) {
+    for (global_transform, tile_settings, mut tile_rect) in query.iter_mut() {
+        let half_tile_width = tile_settings.tile_width as f32 / 2.0;
+        let half_tile_height = tile_settings.tile_height as f32 / 2.0;
+        //Tile
+        tile_rect.left =
+            global_transform.translation.x - half_tile_width * global_transform.scale.x;
+        tile_rect.right =
+            global_transform.translation.x + half_tile_width * global_transform.scale.x;
+        tile_rect.top =
+            global_transform.translation.y + half_tile_height * global_transform.scale.y;
+        tile_rect.bottom =
+            global_transform.translation.y - half_tile_height * global_transform.scale.y;
     }
 }
 

@@ -46,7 +46,7 @@ pub fn draw_gui(
         *ctx_menu_state = ContextMenuState::None;
     }
     let ctx = egui_context.ctx();
-    //The header
+    //The Menu
     egui::TopPanel::top("my_top_panel").show(ctx, |ui| {
         ui.horizontal(|ui| {
             if ui.button("File").clicked() {
@@ -57,7 +57,7 @@ pub fn draw_gui(
             };
         });
     });
-    //If we pressed on to see some context menu
+    //Side Panel for Context Menu
     if *ctx_menu_state != ContextMenuState::None {
         //Create a side menu
         egui::SidePanel::left("context_menu", 200.0).show(ctx, |ui|{
@@ -113,7 +113,8 @@ pub fn draw_gui(
         });
     }
 
-    //If there are tileset entities
+    //Tab View
+    //if entities were created
     if tileset_entities.len() > 0 {
         //Show a tab view of them
         egui::TopPanel::top("tabs").show(ctx, |ui| {
