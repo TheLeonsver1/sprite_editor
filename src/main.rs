@@ -25,7 +25,10 @@ use data::{
     tile_entity::TileBundle,
     tileset_entity::{NewlySelected, TileSetBundle},
 };
-use systems::{initializing::*, tileset_editing::*};
+use systems::{
+    initializing::*,
+    tileset_editing::{editing_tools::*, updating_data::*},
+};
 
 ///TODO: The default font for the app, everything should use this
 pub const DEFAULT_FONT: &str = "Roboto-Regular.ttf";
