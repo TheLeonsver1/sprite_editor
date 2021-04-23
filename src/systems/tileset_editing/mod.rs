@@ -1,2 +1,2 @@
-pub mod editing_tools;
+pub mod tools;
 pub mod updating_data;

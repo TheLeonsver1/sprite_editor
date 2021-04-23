@@ -29,7 +29,7 @@ use data::{
 };
 use systems::{
     initializing::*,
-    tileset_editing::{editing_tools::*, updating_data::*},
+    tileset_editing::{tools::*, updating_data::*},
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -154,7 +154,7 @@ fn main() {
                         .after(SystemLabels::TrackMiddleMouseDragging),
                 )
                 .with_system(
-                    use_pencil_tool_seq
+                    brush_tool
                         .system()
                         .label(SystemLabels::DrawSomething)
                         .after(SystemLabels::GetMousePosPixel),
