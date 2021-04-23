@@ -3,10 +3,7 @@ use bevy_common::input::resources::MouseWorldPosition;
 pub mod brush;
 use crate::{
     data::{
-        assets::Pattern,
-        resources::{MousePixelPosition, SelectedTool},
-        shared_components::CurrentlySelected,
-        tile_entity::{TileData, TilePosition, TileSettings},
+        resources::MousePixelPosition, shared_components::CurrentlySelected,
         tileset_entity::TileSetSettings,
     },
     systems::initializing::get_total_tileset_size_pixels,

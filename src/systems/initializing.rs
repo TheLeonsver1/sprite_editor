@@ -1,6 +1,6 @@
 use crate::data::{
     shared_components::Uninitiated,
-    tile_entity::{TileBundle, TileData, TilePosition, TileRect, TileSettings},
+    tile_entity::{TileBundle, TileData, TilePosition, TileSettings},
     tileset_entity::{TileSetSettings, TileSetView},
 };
 use bevy::utils::HashMap;

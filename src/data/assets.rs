@@ -1,9 +1,4 @@
-use bevy::{
-    asset::{AssetLoader, LoadContext, LoadedAsset},
-    prelude::*,
-    reflect::TypeUuid,
-    utils::BoxedFuture,
-};
+use bevy::{prelude::*, reflect::TypeUuid};
 use serde::Deserialize;
 #[derive(Debug, Deserialize, TypeUuid)]
 #[uuid = "988026cf-8c68-415a-88a5-e515b26c8841"]

@@ -1,6 +1,5 @@
 use bevy::{
     ecs::component::ComponentDescriptor,
-    input::mouse::MouseButtonInput,
     render::{
         pipeline::PipelineDescriptor,
         shader::{Shader, ShaderStage},
@@ -49,9 +48,6 @@ enum SystemLabels {
     GetMousePosPixel,
     TrackMiddleMouseDragging,
     DrawSomething,
-    InitTileset,
-    InitTile,
-    ChangeTileData,
     UpdateTexturesForVisual,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]

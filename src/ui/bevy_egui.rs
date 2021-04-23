@@ -27,7 +27,6 @@ pub enum SelectedFileContextMenuItem {
 #[derive(PartialEq, Eq, Debug)]
 pub enum SelectedOptionsContextMenuItem {
     None,
-    New,
 }
 ///Drawing the egui app ui
 pub fn draw_gui(

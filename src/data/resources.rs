@@ -1,7 +1,4 @@
-use bevy::{
-    math::UVec2,
-    prelude::{Assets, FromWorld, Handle},
-};
+use bevy::{math::UVec2, prelude::Handle};
 
 use super::assets::Pattern;
 pub enum SelectedTool {
