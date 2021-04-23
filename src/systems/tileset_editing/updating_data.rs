@@ -91,7 +91,11 @@ pub fn update_textures_for_changed_tile_data(
         let material = materials.get_mut(material_handle).unwrap();
         //Add this texture to the resource and get the handle back
         let texture_handle = textures.add(Texture::new(
-            Extent3d::new(tile_settings.tile_width, tile_settings.tile_height, 1),
+            Extent3d::new(
+                tile_settings.tile_width as u32,
+                tile_settings.tile_height as u32,
+                1,
+            ),
             TextureDimension::D2,
             tile_data.data.clone(),
             TextureFormat::Rgba8UnormSrgb,

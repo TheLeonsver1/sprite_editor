@@ -1,6 +1,6 @@
 use crate::data::{
     shared_components::Uninitiated,
-    tile_entity::{TileBundle, TileData, TileRect, TileSettings},
+    tile_entity::{TileBundle, TileData, TilePosition, TileRect, TileSettings},
     tileset_entity::{TileSetSettings, TileSetView},
 };
 use bevy::utils::HashMap;
@@ -47,6 +47,9 @@ pub fn init_tileset(
                                 tile_width: tileset_settings.tile_width,
                                 tile_height: tileset_settings.tile_height,
                             },
+                            TilePosition {
+                                position: UVec2::new(x_tileset as u32, y_tileset as u32),
+                            },
                             material_handle,
                             Transform {
                                 //scale,
@@ -72,8 +75,8 @@ pub fn init_tileset(
     }
 }
 ///Calculates the total size of the [TileSetBundle](TileSetBundle)
-pub fn get_total_tileset_size(tileset_settings: &TileSetSettings) -> (f32, f32) {
-    (
+pub fn get_total_tileset_size_pixels(tileset_settings: &TileSetSettings) -> Vec2 {
+    Vec2::new(
         tileset_settings.tileset_width as f32 * tileset_settings.tile_width as f32,
         tileset_settings.tileset_height as f32 * tileset_settings.tile_height as f32,
     )
@@ -84,12 +87,12 @@ pub fn get_scale_fit_tileset_to_screen(
     window_width: f32,
     window_height: f32,
 ) -> f32 {
-    let (tileset_total_width, tileset_total_height) = get_total_tileset_size(tileset_settings);
+    let tileset_total_size = get_total_tileset_size_pixels(tileset_settings);
     let percent;
-    if tileset_total_height >= tileset_total_width {
-        percent = tileset_total_height / (window_height - 100.0);
+    if tileset_total_size.y >= tileset_total_size.x {
+        percent = tileset_total_size.y / (window_height - 100.0);
     } else {
-        percent = tileset_total_width / (window_width - 100.0);
+        percent = tileset_total_size.x / (window_width - 100.0);
     }
     1.0 / percent
 }
@@ -109,9 +112,9 @@ pub fn init_tile_par(
         //Going in reverse because in textures y is higher at the bottom
         for _y_tile in (0..tile_settings.tile_height).rev() {
             for _x_tile in 0..tile_settings.tile_width {
-                sprite_data.push(255);
-                sprite_data.push(255);
-                sprite_data.push(255);
+                sprite_data.push(0);
+                sprite_data.push(0);
+                sprite_data.push(0);
                 sprite_data.push(0);
             }
         }
@@ -130,7 +133,7 @@ pub fn init_tile_seq(
 ) {
     //Honestly, there shouldn't be two sets of new tiles in the same frame but to be safe
     //Also, this could belong in a Local, but i don't even know if it'll be a perf improvement
-    let mut hm: HashMap<(u32, u32), Vec<u8>> = HashMap::default();
+    let mut hm: HashMap<(usize, usize), Vec<u8>> = HashMap::default();
 
     for (entity, tile_settings, mut tile_data/*, mut visible*/) in query.iter_mut() {
         if let Some(texture_data) = hm.get(&(tile_settings.tile_width, tile_settings.tile_height)) {
@@ -144,9 +147,9 @@ pub fn init_tile_seq(
             //TODO: This could be a one dimensional loop, maybe replace it after you copied into the pencil mechanism
             for _y_tile in (0..tile_settings.tile_height).rev() {
                 for _x_tile in 0..tile_settings.tile_width {
-                    texture_data.push(255);
-                    texture_data.push(255);
-                    texture_data.push(255);
+                    texture_data.push(0);
+                    texture_data.push(0);
+                    texture_data.push(0);
                     texture_data.push(0);
                 }
             }

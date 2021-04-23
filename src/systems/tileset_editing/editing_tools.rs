@@ -1,11 +1,15 @@
 use bevy::prelude::*;
 use bevy_common::input::resources::MouseWorldPosition;
 
-use crate::data::{
-    assets::Pattern,
-    resources::SelectedTool,
-    shared_components::CurrentlySelected,
-    tile_entity::{CornerContained, TileData, TileRect, TileSettings},
+use crate::{
+    data::{
+        assets::Pattern,
+        resources::SelectedTool,
+        shared_components::CurrentlySelected,
+        tile_entity::{TileData, TilePosition, TileRect, TileSettings},
+        tileset_entity::TileSetSettings,
+    },
+    systems::initializing::get_total_tileset_size_pixels,
 };
 
 pub fn use_pencil_tool_seq(
@@ -13,123 +17,281 @@ pub fn use_pencil_tool_seq(
     mouse_input: Res<Input<MouseButton>>,
     tool: Res<SelectedTool>,
     patterns: Res<Assets<Pattern>>,
+    tileset_query: Query<(&GlobalTransform, &TileSetSettings), With<CurrentlySelected>>,
     mut query: Query<
-        (
-            Entity,
-            &TileRect,
-            &TileSettings,
-            &GlobalTransform,
-            &mut TileData,
-        ),
+        (Entity, &TileSettings, &TilePosition, &mut TileData),
         With<CurrentlySelected>,
     >,
 ) {
-    //If the user clicked the left mouse button
-    if mouse_input.just_pressed(MouseButton::Left) {
-        match &*tool {
-            SelectedTool::Pencil { pattern_handle } => {
-                let pattern = patterns.get(pattern_handle).unwrap();
-                let mut count = 0;
+    if mouse_input.pressed(MouseButton::Left) {
+        if let Ok((tileset_global_transform, tileset_settings)) = tileset_query.single() {
+            match &*tool {
+                SelectedTool::Pencil { pattern_handle } => {
+                    let pattern = patterns.get(pattern_handle).unwrap();
+                    let mut count = 0;
+                    let mouse_pixel = get_pixel_at_world_position(
+                        tileset_global_transform.scale,
+                        tileset_settings,
+                        mouse_world_position.position,
+                    )
+                    .unwrap();
+                    //Get their pixel position
+                    let (top_left_pixel, top_right_pixel, bottom_left_pixel, bottom_right_pixel) = (
+                        (mouse_pixel.as_i32()
+                            + IVec2::new(-(pattern.size.x as i32 / 2), pattern.size.y as i32 / 2))
+                        .as_u32(),
+                        (mouse_pixel.as_i32()
+                            + IVec2::new(pattern.size.x as i32 / 2, pattern.size.y as i32 / 2))
+                        .as_u32(),
+                        (mouse_pixel.as_i32()
+                            + IVec2::new(
+                                -(pattern.size.x as i32 / 2),
+                                -(pattern.size.y as i32 / 2),
+                            ))
+                        .as_u32(),
+                        (mouse_pixel.as_i32()
+                            + IVec2::new(pattern.size.x as i32 / 2, -(pattern.size.y as i32 / 2)))
+                        .as_u32(),
+                    );
 
-                for (_entity, tile_rect, tile_settings, global_transform, mut tile_data) in
-                    query.iter_mut()
-                {
-                    //This here is a calculation of the rect of the pattern, based on the mouse position
-                    let pattern_rect = TileRect {
-                        left: mouse_world_position.position.x
-                            - pattern.size[0] as f32 / 2.0 * global_transform.scale.x,
-                        right: mouse_world_position.position.x
-                            + pattern.size[0] as f32 / 2.0 * global_transform.scale.x,
-                        top: mouse_world_position.position.y
-                            + pattern.size[1] as f32 / 2.0 * global_transform.scale.y,
-                        bottom: mouse_world_position.position.y
-                            - pattern.size[1] as f32 / 2.0 * global_transform.scale.y,
-                    };
-                    /*
-                    let scaled_corner_contained =
-                        tile_rect.is_other_inside_scaled(global_transform.scale, &pattern_rect);
-                    if scaled_corner_contained != CornerContained::NotContained {
-                        println!("{:?}", scaled_corner_contained);
-                        count += 1;
-                    }
-                    */
-                    //TODO: DONT FORGET Y IS DOWN IN TEXTURES
-                    let pixels_x: usize;
-                    let pixels_y: usize;
-                    let is_contained_scaled =
-                        tile_rect.is_other_inside_scaled(global_transform.scale, &pattern_rect);
-                    match is_contained_scaled {
-                        CornerContained::NotContained => {}
-                        CornerContained::BottomLeft {
-                            units_right,
-                            units_up,
-                        } => {
-                            pixels_x = tile_settings.tile_width as usize - units_right as usize;
-                            pixels_y = units_up as usize;
-                            count += 1;
-                            draw_pixels(pattern, tile_settings, &mut tile_data, pixels_x, pixels_y);
-                        }
-                        CornerContained::BottomRight {
-                            units_left,
-                            units_up,
-                        } => {
-                            pixels_x = units_left as usize;
-                            pixels_y = units_up as usize;
-                            count += 1;
-                            draw_pixels(pattern, tile_settings, &mut tile_data, pixels_x, pixels_y);
-                        }
-                        CornerContained::TopLeft {
-                            units_right,
-                            units_down,
-                        } => {
-                            pixels_x = tile_settings.tile_width as usize - units_right as usize;
-                            pixels_y = tile_settings.tile_height as usize - units_down as usize;
-                            count += 1;
-                            draw_pixels(pattern, tile_settings, &mut tile_data, pixels_x, pixels_y);
-                        }
-                        CornerContained::TopRight {
-                            units_left,
-                            units_down,
-                        } => {
-                            pixels_x = units_left as usize;
-                            pixels_y = tile_settings.tile_height as usize - units_down as usize;
-                            count += 1;
-                            draw_pixels(pattern, tile_settings, &mut tile_data, pixels_x, pixels_y);
+                    println!(
+                        "{:?}------{:?}\n---{:?}---\n{:?}------{:?}\n",
+                        top_left_pixel,
+                        top_right_pixel,
+                        mouse_pixel,
+                        bottom_left_pixel,
+                        bottom_right_pixel
+                    );
+                    for (_entity, tile_settings, tile_position, mut tile_data) in query.iter_mut() {
+                        let tile_min_pixel = UVec2::new(
+                            tile_position.position.x * tile_settings.tile_width as u32,
+                            tile_position.position.y * tile_settings.tile_height as u32,
+                        );
+                        let tile_max_pixel = UVec2::new(
+                            (tile_position.position.x + 1) * tile_settings.tile_width as u32 - 1,
+                            (tile_position.position.y + 1) * tile_settings.tile_height as u32 - 1,
+                        );
+
+                        //Collision Check
+                        if (top_left_pixel.x >= tile_min_pixel.x
+                            && top_left_pixel.y >= tile_min_pixel.y)
+                            && (top_left_pixel.x <= tile_max_pixel.x
+                                && top_left_pixel.y <= tile_max_pixel.y)
+                        {
+                            let pixel_in_tile_coords = top_left_pixel - tile_min_pixel;
+
+                            draw_pixels_in_tile(
+                                pixel_in_tile_coords,
+                                Horizontal::Left,
+                                Vertical::Top,
+                                &mut tile_data,
+                                tile_settings,
+                                pattern,
+                            );
+                        } else if (top_right_pixel.x >= tile_min_pixel.x
+                            && top_right_pixel.y >= tile_min_pixel.y)
+                            && (top_right_pixel.x <= tile_max_pixel.x
+                                && top_right_pixel.y <= tile_max_pixel.y)
+                        {
+                            let pixel_in_tile_coords = top_right_pixel - tile_min_pixel;
+
+                            draw_pixels_in_tile(
+                                pixel_in_tile_coords,
+                                Horizontal::Right,
+                                Vertical::Top,
+                                &mut tile_data,
+                                tile_settings,
+                                pattern,
+                            );
+                        } else if (bottom_left_pixel.x >= tile_min_pixel.x
+                            && bottom_left_pixel.y >= tile_min_pixel.y)
+                            && (bottom_left_pixel.x <= tile_max_pixel.x
+                                && bottom_left_pixel.y <= tile_max_pixel.y)
+                        {
+                            let pixel_in_tile_coords = bottom_left_pixel - tile_min_pixel;
+
+                            draw_pixels_in_tile(
+                                pixel_in_tile_coords,
+                                Horizontal::Left,
+                                Vertical::Bottom,
+                                &mut tile_data,
+                                tile_settings,
+                                pattern,
+                            );
+                        } else if (bottom_right_pixel.x >= tile_min_pixel.x
+                            && bottom_right_pixel.y >= tile_min_pixel.y)
+                            && (bottom_right_pixel.x <= tile_max_pixel.x
+                                && bottom_right_pixel.y <= tile_max_pixel.y)
+                        {
+                            let pixel_in_tile_coords = bottom_right_pixel - tile_min_pixel;
+                            draw_pixels_in_tile(
+                                pixel_in_tile_coords,
+                                Horizontal::Right,
+                                Vertical::Bottom,
+                                &mut tile_data,
+                                tile_settings,
+                                pattern,
+                            );
                         }
                     }
                 }
-                println!("amount of tiles changed: {:?}\n", count);
+                _ => {}
             }
-            _ => {}
         }
     }
 }
-//FIXME: This is only drawing one pixel of the pattern, debug why
-pub fn draw_pixels(
+///FIXME:This doesn't completely work, not sure why
+fn get_pixel_at_world_position(
+    scale: Vec3,
+    tileset_settings: &TileSetSettings,
+    world_position: Vec2,
+) -> Option<UVec2> {
+    //let world_position = Vec2::new(f32::floor(world_position.x), f32::floor(world_position.y));
+    let tileset_size = get_total_tileset_size_pixels(&tileset_settings);
+    let tileset_size_ivec = tileset_size.as_i32();
+    let world_position_reverse_scaled_to_pixels =
+        Vec2::new(world_position.x / scale.x, world_position.y / scale.y);
+    let world_position_reverse_offset =
+        world_position_reverse_scaled_to_pixels.as_i32() + tileset_size_ivec / 2;
+    if world_position_reverse_offset >= IVec2::new(0, 0)
+        && world_position_reverse_offset < tileset_size_ivec
+    {
+        return Some(world_position_reverse_offset.as_u32());
+    } else if world_position_reverse_offset < IVec2::new(0, 0) {
+        return Some(UVec2::new(0, 0));
+    } else if world_position_reverse_offset < tileset_size_ivec {
+        return Some(tileset_size.as_u32() - UVec2::new(1, 1));
+    }
+    return None;
+}
+#[derive(Debug)]
+enum Horizontal {
+    Left,
+    Right,
+}
+#[derive(Debug)]
+enum Vertical {
+    Top,
+    Bottom,
+}
+#[derive(Debug)]
+struct XData {
+    tile_x_min: u32,
+    tile_x_max: u32,
+    pattern_start_x: u32,
+    pattern_end_x: u32,
+}
+#[derive(Debug)]
+struct YData {
+    tile_y_min: u32,
+    tile_y_max: u32,
+    pattern_start_y: u32,
+    pattern_end_y: u32,
+}
+fn get_x_for_drawing_loop(
+    side: &Horizontal,
     pattern: &Pattern,
+    pixel_in_tile_coords: UVec2,
     tile_settings: &TileSettings,
+) -> XData {
+    //println!("get_x::pixel_in_tile_coords:{:?}", pixel_in_tile_coords);
+    let tile_min_pixel = UVec2::ZERO;
+    match side {
+        Horizontal::Left => XData {
+            //we are the left corner, from left to right, we start at our pos
+            tile_x_min: pixel_in_tile_coords.x,
+            //we need to end either after the pattern ends, or at the end of the tile
+            tile_x_max: u32::min(
+                pixel_in_tile_coords.x + pattern.size.x,
+                tile_settings.tile_width as u32,
+            ),
+            //we are the left corner, our pattern's start is on zero
+            pattern_start_x: 0,
+            //we either end when our pattern ends, or at the tile's end
+            pattern_end_x: u32::min(
+                pattern.size.x,
+                tile_settings.tile_width as u32 - pixel_in_tile_coords.x,
+            ),
+        },
+        //TODO: this is going to need conversion to i32 so as to not overflow on substraction
+        Horizontal::Right => XData {
+            //we are the right corner, from left to right, we either start at where our pattern can fit, or at the start of the tile
+            tile_x_min: i32::max(
+                tile_min_pixel.x as i32,
+                pixel_in_tile_coords.x as i32 - pattern.size.x as i32,
+            ) as u32,
+            //we are the right corner, the pattern ends on us
+            tile_x_max: pixel_in_tile_coords.x + 1,
+            //we are the right corner, our pattern's start is dependant if the pattern can fit, else, what's left
+            pattern_start_x: i32::max(0, pattern.size.x as i32 - 1 - pixel_in_tile_coords.x as i32)
+                as u32,
+            //we either end when our pattern ends, or at the tile's end
+            pattern_end_x: pattern.size.x,
+        },
+    }
+}
+///FIXME:idk how and why this works, this will probably be technical debt later
+fn get_y_for_drawing_loop(
+    side: &Vertical,
+    pattern: &Pattern,
+    pixel_in_tile_coords: UVec2,
+    tile_settings: &TileSettings,
+) -> YData {
+    let tile_min_pixel = UVec2::ZERO;
+    //println!("get_y::pixel_in_tile_coords:{:?}", pixel_in_tile_coords);
+    match side {
+        Vertical::Top => YData {
+            tile_y_min: i32::max(
+                tile_min_pixel.y as i32,
+                pixel_in_tile_coords.y as i32 - (pattern.size.y as i32 - 1),
+            ) as u32,
+            tile_y_max: u32::min(pixel_in_tile_coords.y + 1, tile_settings.tile_height as u32),
+            pattern_start_y: i32::max(0, pattern.size.y as i32 - 1 - pixel_in_tile_coords.y as i32)
+                as u32,
+            pattern_end_y: pattern.size.y,
+        },
+
+        Vertical::Bottom => YData {
+            //FIXME: THERE'S A BUG HERE
+            tile_y_min: pixel_in_tile_coords.y,
+            tile_y_max: u32::min(
+                pixel_in_tile_coords.y + pattern.size.y,
+                tile_settings.tile_height as u32,
+            ),
+            pattern_start_y: 0,
+            pattern_end_y: u32::min(
+                pattern.size.y,
+                tile_settings.tile_height as u32 - pixel_in_tile_coords.y,
+            ),
+        },
+    }
+}
+fn draw_pixels_in_tile(
+    pixel_in_tile_coords: UVec2,
+    horizontal: Horizontal,
+    vertical: Vertical,
     tile_data: &mut TileData,
-    pixels_x: usize,
-    pixels_y: usize,
+    tile_settings: &TileSettings,
+    pattern: &Pattern,
 ) {
-    let y_max = usize::min(
-        pattern.size[1],
-        tile_settings.tile_height as usize - pixels_y,
+    let x_data = get_x_for_drawing_loop(&horizontal, pattern, pixel_in_tile_coords, tile_settings);
+    let y_data = get_y_for_drawing_loop(&vertical, pattern, pixel_in_tile_coords, tile_settings);
+    println!(
+        "Vertical:{:?},Horizontal:{:?}\npixel_in_tile_coords:{:?}\nx_data:{:?}\ny_data:{:?}",
+        vertical, horizontal, pixel_in_tile_coords, x_data, y_data
     );
-    let x_max = usize::min(
-        pattern.size[0],
-        tile_settings.tile_width as usize - pixels_x,
-    );
-    for y in (0..y_max).rev() {
-        for x in 0..x_max {
+    for (i_y, y_tile) in (y_data.tile_y_min..y_data.tile_y_max).enumerate() {
+        for (i_x, x_tile) in (x_data.tile_x_min..x_data.tile_x_max).enumerate() {
             for p in 0..4 {
-                tile_data.data[((pixels_y + y) * tile_settings.tile_width as usize) * 4
-                    + (pixels_x + x) * 4
-                    + p] = pattern.pattern_pixels[y * x][p];
+                tile_data.data[(tile_settings.tile_height - 1 - y_tile as usize)
+                    * tile_settings.tile_width
+                    * 4
+                    + (x_tile as usize) * 4
+                    + p] = pattern.pattern_pixels[(y_data.pattern_start_y as usize + i_y)
+                    * pattern.size.x as usize
+                    + (x_data.pattern_start_x as usize + i_x)][p];
             }
         }
     }
-    //TODO: this could be disable later
-    println!("x_max, y_max is on ={:?},{:?} ", x_max, y_max);
-    println!("corner is on x,y ={:?},{:?} ", pixels_x, pixels_y);
+    println!("");
 }

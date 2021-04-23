@@ -1,5 +1,6 @@
 use bevy::{
     ecs::component::ComponentDescriptor,
+    input::mouse::MouseButtonInput,
     render::{
         pipeline::PipelineDescriptor,
         shader::{Shader, ShaderStage},
@@ -72,8 +73,8 @@ fn main() {
         .insert_resource(ClearColor { 0: Color::BLACK })
         //.add_plugins(TilemapDefaultPlugins)
         //Enabling Logging:
-        .add_plugin(bevy::diagnostic::EntityCountDiagnosticsPlugin::default())
-        .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        //.add_plugin(bevy::diagnostic::EntityCountDiagnosticsPlugin::default())
+        //.add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
         //Startup
         .register_component(ComponentDescriptor::new::<Uninitiated>(
             StorageType::SparseSet,
@@ -133,6 +134,13 @@ fn main() {
                         .label(SystemLabels::TrackMiddleMouseDragging)
                         .after(SystemLabels::GetMousePos),
                 )
+                /*
+                .with_system(
+                    debug_mouse_position_with_shape
+                        .system()
+                        .after(SystemLabels::GetMousePos),
+                )
+                */
                 .with_system(
                     move_camera_with_middle_mouse_drag
                         .system()
@@ -227,7 +235,26 @@ fn setup_tools(mut commands: Commands, mut pattern_assets: ResMut<Assets<Pattern
 
     let pattern_handle = pattern_assets.add(Pattern {
         pattern_pixels,
-        size: [3, 3],
+        size: UVec2::new(3, 3),
     });
     commands.insert_resource(data::resources::SelectedTool::Pencil { pattern_handle })
 }
+/*
+fn debug_mouse_position_with_shape(
+    input: Res<Input<MouseButton>>,
+    mut commands: Commands,
+    mouse_pos: Res<MouseWorldPosition>,
+) {
+    if input.just_pressed(MouseButton::Left) {
+        commands.spawn_bundle(GeometryBuilder::build_as(
+            &shapes::Circle {
+                radius: 2.0,
+                ..Default::default()
+            },
+            ShapeColors::new(Color::BLACK),
+            DrawMode::Fill(FillOptions::default()),
+            Transform::from_translation(mouse_pos.position.extend(1.0)),
+        ));
+    }
+}
+*/

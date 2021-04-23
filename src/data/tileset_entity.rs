@@ -31,10 +31,10 @@ impl TileSetBundle {
 ///The basic info of the [TileSetBundle](TileSetBundle)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileSetSettings {
-    pub tile_width: u32,
-    pub tile_height: u32,
-    pub tileset_height: u8,
-    pub tileset_width: u8,
+    pub tile_width: usize,
+    pub tile_height: usize,
+    pub tileset_height: usize,
+    pub tileset_width: usize,
 }
 //The default would be a single sprite
 impl Default for TileSetSettings {
