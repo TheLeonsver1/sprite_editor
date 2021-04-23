@@ -4,7 +4,7 @@ use bevy_common::input::resources::MouseWorldPosition;
 use crate::{
     data::{
         assets::Pattern,
-        resources::SelectedTool,
+        resources::{MousePixelPosition, SelectedTool},
         shared_components::CurrentlySelected,
         tile_entity::{TileData, TilePosition, TileRect, TileSettings},
         tileset_entity::TileSetSettings,
@@ -12,30 +12,51 @@ use crate::{
     systems::initializing::get_total_tileset_size_pixels,
 };
 
-pub fn use_pencil_tool_seq(
+///This sets a resource that holds the mouse's pixel position for this frame, if it's not on a tileset, it's set to None
+pub fn get_mouse_pixel_tileset_pos(
     mouse_world_position: Res<MouseWorldPosition>,
+    mut mouse_pixel_pos: ResMut<MousePixelPosition>,
+    query: Query<(&TileSetSettings, &GlobalTransform), With<CurrentlySelected>>,
+) {
+    //let world_position = Vec2::new(f32::floor(world_position.x), f32::floor(world_position.y));
+    if let Ok((tileset_settings, global_transform)) = query.single() {
+        let tileset_size = get_total_tileset_size_pixels(&tileset_settings);
+        let tileset_size_ivec = tileset_size.as_i32();
+        let world_position_reverse_scaled_to_pixels = Vec2::new(
+            mouse_world_position.position.x / global_transform.scale.x,
+            mouse_world_position.position.y / global_transform.scale.y,
+        );
+        let world_position_reverse_offset =
+            world_position_reverse_scaled_to_pixels.as_i32() + tileset_size_ivec / 2;
+        if world_position_reverse_offset >= IVec2::new(0, 0)
+            && world_position_reverse_offset < tileset_size_ivec
+        {
+            mouse_pixel_pos.pixel_position = Some(world_position_reverse_offset.as_u32());
+        } else {
+            mouse_pixel_pos.pixel_position = None;
+        }
+    }
+}
+
+pub fn use_pencil_tool_seq(
+    mouse_pixel_position: Res<MousePixelPosition>,
     mouse_input: Res<Input<MouseButton>>,
     tool: Res<SelectedTool>,
     patterns: Res<Assets<Pattern>>,
-    tileset_query: Query<(&GlobalTransform, &TileSetSettings), With<CurrentlySelected>>,
     mut query: Query<
         (Entity, &TileSettings, &TilePosition, &mut TileData),
         With<CurrentlySelected>,
     >,
 ) {
+    //If the user is pressing the left mouse button
     if mouse_input.pressed(MouseButton::Left) {
-        if let Ok((tileset_global_transform, tileset_settings)) = tileset_query.single() {
-            match &*tool {
-                SelectedTool::Pencil { pattern_handle } => {
+        //And his current tool is the Brush
+        match &*tool {
+            SelectedTool::Pencil { pattern_handle } => {
+                //If the user is hovering on the tileset and
+                if let Some(mouse_pixel) = mouse_pixel_position.pixel_position {
                     let pattern = patterns.get(pattern_handle).unwrap();
-                    let mut count = 0;
-                    let mouse_pixel = get_pixel_at_world_position(
-                        tileset_global_transform.scale,
-                        tileset_settings,
-                        mouse_world_position.position,
-                    )
-                    .unwrap();
-                    //Get their pixel position
+                    //Get the pattern's corner pixels' positions
                     let (top_left_pixel, top_right_pixel, bottom_left_pixel, bottom_right_pixel) = (
                         (mouse_pixel.as_i32()
                             + IVec2::new(-(pattern.size.x as i32 / 2), pattern.size.y as i32 / 2))
@@ -135,35 +156,12 @@ pub fn use_pencil_tool_seq(
                         }
                     }
                 }
-                _ => {}
             }
+            _ => {}
         }
     }
 }
-///FIXME:This doesn't completely work, not sure why
-fn get_pixel_at_world_position(
-    scale: Vec3,
-    tileset_settings: &TileSetSettings,
-    world_position: Vec2,
-) -> Option<UVec2> {
-    //let world_position = Vec2::new(f32::floor(world_position.x), f32::floor(world_position.y));
-    let tileset_size = get_total_tileset_size_pixels(&tileset_settings);
-    let tileset_size_ivec = tileset_size.as_i32();
-    let world_position_reverse_scaled_to_pixels =
-        Vec2::new(world_position.x / scale.x, world_position.y / scale.y);
-    let world_position_reverse_offset =
-        world_position_reverse_scaled_to_pixels.as_i32() + tileset_size_ivec / 2;
-    if world_position_reverse_offset >= IVec2::new(0, 0)
-        && world_position_reverse_offset < tileset_size_ivec
-    {
-        return Some(world_position_reverse_offset.as_u32());
-    } else if world_position_reverse_offset < IVec2::new(0, 0) {
-        return Some(UVec2::new(0, 0));
-    } else if world_position_reverse_offset < tileset_size_ivec {
-        return Some(tileset_size.as_u32() - UVec2::new(1, 1));
-    }
-    return None;
-}
+
 #[derive(Debug)]
 enum Horizontal {
     Left,
@@ -213,7 +211,6 @@ fn get_x_for_drawing_loop(
                 tile_settings.tile_width as u32 - pixel_in_tile_coords.x,
             ),
         },
-        //TODO: this is going to need conversion to i32 so as to not overflow on substraction
         Horizontal::Right => XData {
             //we are the right corner, from left to right, we either start at where our pattern can fit, or at the start of the tile
             tile_x_min: i32::max(
@@ -238,7 +235,6 @@ fn get_y_for_drawing_loop(
     tile_settings: &TileSettings,
 ) -> YData {
     let tile_min_pixel = UVec2::ZERO;
-    //println!("get_y::pixel_in_tile_coords:{:?}", pixel_in_tile_coords);
     match side {
         Vertical::Top => YData {
             tile_y_min: i32::max(

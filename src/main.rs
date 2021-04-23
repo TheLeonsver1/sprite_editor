@@ -22,6 +22,7 @@ mod systems;
 mod ui;
 use data::{
     assets::Pattern,
+    resources::MousePixelPosition,
     shared_components::{CurrentlySelected, Uninitiated},
     tile_entity::TileBundle,
     tileset_entity::{NewlySelected, TileSetBundle},
@@ -31,8 +32,6 @@ use systems::{
     tileset_editing::{editing_tools::*, updating_data::*},
 };
 
-///TODO: The default font for the app, everything should use this
-pub const DEFAULT_FONT: &str = "Roboto-Regular.ttf";
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 ///The app's current state
 pub enum AppState {
@@ -46,7 +45,8 @@ pub enum AppState {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemLabel)]
 enum SystemLabels {
     DrawGui,
-    GetMousePos,
+    GetMousePosWorld,
+    GetMousePosPixel,
     TrackMiddleMouseDragging,
     DrawSomething,
     InitTileset,
@@ -86,6 +86,8 @@ fn main() {
             StorageType::SparseSet,
         ))
         .add_asset::<Pattern>()
+        .insert_resource(MouseWorldPosition::default())
+        .insert_resource(MousePixelPosition::default())
         .add_startup_system(spawn_cameras_system.system())
         .add_startup_system(setup_tile_pipeline.system())
         .add_startup_system(setup_tools.system())
@@ -117,7 +119,6 @@ fn main() {
         )
         //This is the stage where we can actually use the app
         //We need a mouse world position resource for this
-        .insert_resource(MouseWorldPosition::default())
         .add_event::<MouseDragEvent>()
         .add_stage_after(
             StageLabels::UpdateView,
@@ -126,13 +127,19 @@ fn main() {
                 .with_system(
                     get_mouse_world_position
                         .system()
-                        .label(SystemLabels::GetMousePos),
+                        .label(SystemLabels::GetMousePosWorld),
                 )
                 .with_system(
                     track_middle_mouse_dragging
                         .system()
                         .label(SystemLabels::TrackMiddleMouseDragging)
-                        .after(SystemLabels::GetMousePos),
+                        .after(SystemLabels::GetMousePosWorld),
+                )
+                .with_system(
+                    get_mouse_pixel_tileset_pos
+                        .system()
+                        .label(SystemLabels::GetMousePosPixel)
+                        .after(SystemLabels::GetMousePosWorld),
                 )
                 /*
                 .with_system(
@@ -150,7 +157,7 @@ fn main() {
                     use_pencil_tool_seq
                         .system()
                         .label(SystemLabels::DrawSomething)
-                        .after(SystemLabels::GetMousePos),
+                        .after(SystemLabels::GetMousePosPixel),
                 )
                 .with_system(
                     update_textures_for_changed_tile_data
